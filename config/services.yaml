@@ -4,6 +4,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    csv_header_configuration: '%env(CSV_CONFIGPATH)%/headers.conf'
+    csv_file_rootpath: '%env(CSV_FILEPATH)%'
 
 services:
     # default configuration for services in *this* file
@@ -19,6 +21,7 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+            - '../src/service/'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
