@@ -10,13 +10,69 @@ namespace App\GeoUtils;
 class GeoUtils
 {
     // Earth's radius in meters
-    const GEO_R = 6371000;
+    const GEO_R = 6378137 ;
 
     /**
      */
     public function __construct()
     {
         
+    }
+    
+    /**
+     * SPLITARC Calculates the coordinates between the start and end points at each split distance
+     * All coord input in degrees.
+     * Output array in degrees
+     * @param float $latA
+     * @param float $lonA
+     * @param float $bearing
+     * @param float $distance
+     */
+    public function splitArc(float $latStart, float $lonStart, float $latDest, float $lonDest, float $split) : array
+    {
+        $dest = array();
+        $latA = deg2rad($latStart); $lonA = deg2rad($lonStart);
+        $latB = deg2rad($latDest); $lonB = deg2rad($lonDest);
+
+        $bearing = $this->bear($latA, $lonA, $latB, $lonB);
+        $dist = $this->dist($latA, $lonA, $latB, $lonB);
+        
+        $newSplit = $split;
+        while ($dist > $newSplit) {
+            $point = $this->calcDest($latA, $lonA, $bearing, $newSplit);
+            foreach ($point as $p) {
+                $p = rad2deg($p);
+            }
+            $dest[] = $point;
+        
+            $newSplit += $split;
+        }
+    
+        return $dest;
+    }
+    
+    
+    /**
+     * CALCDEST Calculates destination point given distance and bearing from start point
+     *     Formula:	φ2 = asin( sin φ1 ⋅ cos δ + cos φ1 ⋅ sin δ ⋅ cos θ )
+     *     λ2 = λ1 + atan2( sin θ ⋅ sin δ ⋅ cos φ1, cos δ − sin φ1 ⋅ sin φ2 )
+     *     where	φ is latitude, λ is longitude, θ is the bearing (clockwise from north), δ is the angular distance d/R; d being the distance travelled, R the earth’s radius
+     * 
+     * Input latA,lonA in radian.
+     * Output array in radian
+     * @param float $latA
+     * @param float $lonA
+     * @param float $bearing
+     * @param float $distance
+     */
+    public function calcDest(float $latA, float $lonA, float $bearing, float $distance) : array
+    {
+        $dest = array();
+        $angDist = $distance / self::GEO_R;
+        $dest['lat'] = $dest[0] = asin( sin($latA) * cos($angDist) + cos($latA) * sin($angDist) * $bearing );
+        $dest['lon'] = $dest[1] = $lonA + atan2( sin($bearing) * sin($angDist) * cos($latA), cos($angDist) - sin($latA) * sin($dest[0]) );
+        
+        return $dest;
     }
     
     /**
@@ -71,6 +127,7 @@ class GeoUtils
     
     /**
      * DIST Finds the distance between two lat/lon points.
+     * All parameters in radian
      * @param float $latA
      * @param float $lonA
      * @param float $latB
@@ -86,6 +143,7 @@ class GeoUtils
     
     /**
      * BEAR Finds the bearing from one lat/lon point to another.
+     * All parameters in radian
      * @param float $latA
      * @param float $lonA
      * @param float $latB
