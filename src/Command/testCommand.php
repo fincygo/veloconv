@@ -39,7 +39,7 @@ class testCommand extends Command
         $handler = new CSVHandler( $this->params );
 
         //$handler->loadfile("iRAP/irap-aggregated-export.csv");
-        //$handler->loadfile("ECS/minor_sections.csv");               
+        $handler->loadfile("ECS/minor_sections.csv");               
         //$handler->loadfile("ECS/surveys.csv");
         //$handler->loadfile("ECS/survey_points_crossing_or_obstacle.csv");  
         /*

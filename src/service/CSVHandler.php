@@ -195,7 +195,7 @@ class CSVHandler
             }
         }
         if (strlen($text) > 0 ) $fields[] = $text;
-        
+
         /*
         if ( $this->textwrapper )
         {
