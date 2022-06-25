@@ -38,18 +38,18 @@ class testCommand extends Command
     {
         $handler = new CSVHandler( $this->params );
 
-        $handler->loadfile("iRAP/irap-aggregated-export.csv");
-        $handler->loadfile("ECS/minor_sections.csv");
+        //$handler->loadfile("iRAP/irap-aggregated-export.csv");
+        $handler->loadfile("ECS/minor_sections.csv");               
+        //$handler->loadfile("ECS/surveys.csv");
+        //$handler->loadfile("ECS/survey_points_crossing_or_obstacle.csv");  
         /*
         $handler->loadfile("ECS/survey_points_accommodation_or_food.csv");
         $handler->loadfile("ECS/survey_points_attraction.csv");
-        $handler->loadfile("ECS/survey_points_bike_services.csv");
-        */
-        $handler->loadfile("ECS/survey_points_crossing_or_obstacle.csv");
-        /*
+        $handler->loadfile("ECS/survey_points_bike_services.csv");        
+              
         $handler->loadfile("ECS/survey_points_rest_area.csv");
         $handler->loadfile("ECS/survey_points_signing.csv");
-        $handler->loadfile("ECS/surveys.csv");        
+        $handler->loadfile("ECS/surveys.csv");
         */
         $output->writeln('end of test.');
         return Command::SUCCESS;
