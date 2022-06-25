@@ -1,5 +1,5 @@
 <?php
-namespace src\service;
+namespace App\Service;
 
 use App\Model\AbstractRecordSet;
 

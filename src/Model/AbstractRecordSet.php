@@ -13,11 +13,18 @@ abstract class AbstractRecordSet implements \ArrayAccess, \IteratorAggregate
      * @var AbstractRecord[]
      */
     private $records;
+    
+    /**
+     * @var array
+     */
+    private $headers;
 
     /**
      */
-    public function __construct()
-    {}
+    public function __construct(?array $headers)
+    {
+        $this->headers = $headers;
+    }
     
     public function getRecords()
     {
@@ -48,6 +55,23 @@ abstract class AbstractRecordSet implements \ArrayAccess, \IteratorAggregate
     {
         $this->records[$offset] = $value;
     }
+    
+    /**
+     * @return array
+     */
+    public function getHeaders() : array
+    {
+        return $this->headers;
+    }
+
+    /**
+     * @param array $headers
+     */
+    public function setHeaders(array $headers)
+    {
+        $this->headers = $headers;
+    }
+
 
     
     

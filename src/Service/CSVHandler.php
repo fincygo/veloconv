@@ -1,5 +1,5 @@
 <?php
-namespace App\service;
+namespace App\Service;
 
 use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 // $this->params->get('res_download_path');
