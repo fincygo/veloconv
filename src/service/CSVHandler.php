@@ -266,14 +266,14 @@ class CSVHandler
         $listInvalid     = array();
         $listTemplates   = array();
         $listTypes       = array();
-        $this->hdrFields = array();
+        $hdrFields       = array();
 
         foreach ( $fields as $field )
         {
-            $this->hdrFields[ $field ] = $this->csvFieldName( $field );
-            if ( false === ($aFieldDef = $this->findFieldDefinition( $this->hdrFields[ $field ]) ))
+            $hdrFields[ $field ] = $this->csvFieldName( $field );
+            if ( false === ($aFieldDef = $this->findFieldDefinition( $hdrFields[ $field ]) ))
             {
-                $listInvalid[] = $this->hdrFields[ $field ];
+                $listInvalid[] = $hdrFields[ $field ];
             }
             else
             {
@@ -291,6 +291,8 @@ class CSVHandler
 
         $this->csvType     = array_key_first( $listTypes     );
         $this->csvTemplate = array_key_first( $listTemplates );
+
+        $this->setHeaderFields( $hdrFields );
         
         echo "found:" . array_key_first($listTypes) . " - " . array_key_first($listTemplates) . "\n";
 
@@ -341,16 +343,15 @@ class CSVHandler
     protected function analyseData( $line ):bool
     //--------------------------------------------------------------------------------------------------------------
     {
-
         $fields = $this->splitByDelimiter( $line );
-
         if ( count( $fields ) === count( $this->hdrFields )  ) 
         {
             $fieldNames = array_keys( $this->hdrFields );
             $hdrIndex   = -1;
+
             foreach ($fields as $value )
             {
-                // echo "{$this->hdrFields[ $fieldNames[++$hdrIndex] ]} = {$value} \n";
+                echo "{$this->hdrFields[ $fieldNames[++$hdrIndex] ]} = {$value} \n";
             }
             return true;
         }
