@@ -2,9 +2,7 @@
 namespace App\service;
 
 use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
-// $this->params->get('res_download_path');
-// $regex = "/\"( (?:[^\"\\\\]++|\\\\.)*+ ) \" | ' ( (?:[^'\\\\]++|\\\\.)*+ ) ' | \( ( [^)]* ) \) | [\s,]+ /x ";
-// $tags = preg_split($regex, $str, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+
 
 /**
  *
@@ -16,6 +14,7 @@ class CSVHandler
     const ERROR_CONFIG  = "Error while reading the fields configuration file.";
     const ERROR_HEADER  = "Error in processing CSV header or header missing.";    
     const ERROR_DATA    = "Error in processing data line.";
+    const ERROR_BADDATA = "Bad fileformat, the data does not match the header.";
     const REGEX_FIELDS  = "/\"( (?:[^\"\\\\]++|\\\\.)*+ ) \" | ' ( (?:[^'\\\\]++|\\\\.)*+ ) ' | \( ( [^)]* ) \) | [\s#]+ /x ";
 
     /**
@@ -131,6 +130,22 @@ class CSVHandler
         $file = null;
         return true;        
     }
+    //
+    //==============================================================================================================
+
+
+    //==============================================================================================================
+    public function checkTemplate( string $templateName ):bool
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        return ($this->csvTemplate && $this->csvTemplate == $templateName );             
+    }
+    //==============================================================================================================
+    public function checkType( string $type ):bool
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        return ($this->csvType && $this->csvType == $type );
+    }
     //==============================================================================================================
 
 
@@ -151,6 +166,53 @@ class CSVHandler
     }
     //==============================================================================================================
 
+
+    //==============================================================================================================
+    protected function splitByDelimiter( string $line ):array
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        $fields = array();
+        $text   = "";
+        $inside = false;
+        for ( $p = 0; $p<strlen($line); ++$p )
+        {
+            $ch = substr( $line, $p, 1 );
+            if ( $inside )
+            {
+                if ($ch == '"' )  $inside = false; else $text .= $ch;    
+            }
+            else
+            {
+                if ( $ch === $this->delimiter )
+                {
+                    $fields[] = $text;
+                    $text = "";
+                }
+                else
+                {
+                    if ($ch === '"') $inside = true; else $text .= $ch;
+                }
+            }
+        }
+        if (strlen($text) > 0 ) $fields[] = $text;
+        
+        /*
+        if ( $this->textwrapper )
+        {
+            //
+            // A fejlécben észlelt delimiterek meghatározzák a mezők számát. Elvileg minden mezőnevet határolók közé kell rakni, 
+            // ha ilyen formátuma van a CSV-nek. Tehát ha minden mezőt határolunk, akkor 2x annyinak kell a határolóból lenni, mint
+            // a mezőből. Ezért a > 0 helyett legalább a fieldCountByDelimiter-hez viszonyítom.
+            //
+            $pattern  = str_replace( "#", $this->delimiter,  CSVHandler::REGEX_FIELDS );
+            $fields   = preg_split( $pattern, $line, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE );
+        }
+        else
+            $fields   = explode( $this->delimiter, $line );
+        */            
+        return $fields;
+    }
+    //==============================================================================================================
 
 
     //==============================================================================================================
@@ -175,21 +237,10 @@ class CSVHandler
                             "tab"   =>  substr_count($line, $delimiters["tab"]   )        
                            );
         arsort( $cntr );
-        $this->delimiter = $delimiters[ array_key_first($cntr) ];
+        $this->delimiter       = $delimiters[ array_key_first($cntr) ];
         $fieldCountByDelimiter = $cntr[ array_key_first($cntr) ] + 1;
-        if ( substr_count($line, "\"" ) > $fieldCountByDelimiter || substr_count($line, "\'" ) > $fieldCountByDelimiter )
-        {
-            //
-            // A fejlécben észlelt delimiterek meghatározzák a mezők számát. Elvileg minden mezőnevet határolók közé kell rakni, 
-            // ha ilyen formátuma van a CSV-nek. Tehát ha minden mezőt határolunk, akkor 2x annyinak kell a határolóból lenni, mint
-            // a mezőből. Ezért a > 0 helyett legalább a fieldCountByDelimiter-hez viszonyítom.
-            //
-            $this->textwrapper = true;
-            $pattern  = str_replace( "#", $this->delimiter,  CSVHandler::REGEX_FIELDS );
-            $fields   = preg_split( $pattern, $line, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE );
-        }
-        else
-            $fields   = explode( $this->delimiter, $line );
+        $this->textwrapper     = ( substr_count($line, "\"" ) > $fieldCountByDelimiter || substr_count($line, "\'" ) > $fieldCountByDelimiter );
+        $fields                = $this->splitByDelimiter( $line );
         
         if ( count($fields) > 0 )
         {
@@ -290,6 +341,22 @@ class CSVHandler
     protected function analyseData( $line ):bool
     //--------------------------------------------------------------------------------------------------------------
     {
+
+        $fields = $this->splitByDelimiter( $line );
+
+        if ( count( $fields ) === count( $this->hdrFields )  ) 
+        {
+            $fieldNames = array_keys( $this->hdrFields );
+            $hdrIndex   = -1;
+            foreach ($fields as $value )
+            {
+                // echo "{$this->hdrFields[ $fieldNames[++$hdrIndex] ]} = {$value} \n";
+            }
+            return true;
+        }
+        else
+            throw new \RuntimeException( CSVHandler::ERROR_BADDATA );
+
         return false;
     }
     //==============================================================================================================
