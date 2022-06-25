@@ -1,6 +1,8 @@
 <?php
 namespace App\Converter;
 
+use App\Service\CSVHandler;
+
 /**
  *
  * @author petrics.lajos
@@ -43,13 +45,20 @@ class IrapToEcsConverter
     protected $mergedRows;
     
     /**
+     * @var CSVHandler
      */
-    public function __construct()
+    protected $csvhandler;
+    
+    /**
+     */
+    public function __construct(CSVHandler $csvhandler, $avgHeight = 0)
     {
         $this->averageHeight = 0;
         $this->maxDivergence = 1.0;
         $this->minLength = 200.0;
         $this->maxLength = 5000.0;
+        
+        $this->csvhandler = $csvhandler;
     }
 }
 

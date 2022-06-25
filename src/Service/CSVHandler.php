@@ -1,5 +1,5 @@
 <?php
-namespace App\service;
+namespace App\Service;
 
 use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 
@@ -17,6 +17,8 @@ class CSVHandler
     const ERROR_BADDATA = "Bad fileformat, the data does not match the header.";
     const REGEX_FIELDS  = "/\"( (?:[^\"\\\\]++|\\\\.)*+ ) \" | ' ( (?:[^'\\\\]++|\\\\.)*+ ) ' | \( ( [^)]* ) \) | [\s#]+ /x ";
 
+    const CSVT_IRAP = 1;
+    
     /**
      * @var string
      */
