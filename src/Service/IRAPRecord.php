@@ -45,6 +45,11 @@ class IRAPRecord extends AbstractRecord
     public function __construct(array $fields)
     {
         parent::__construct($fields);
+        $this->newId = 0;
+        $this->vertex = false;
+        $this->geometry = "";
+        $this->record = array();
+       $this->latlong = array();
     }
     
     /**
