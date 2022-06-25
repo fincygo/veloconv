@@ -9,7 +9,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use App\service\CSVHandler;
+use App\Service\CSVHandler;
 
 class testCommand extends Command
 {
