@@ -7,7 +7,7 @@ namespace App\Model;
  *        
  *        Record set of for a CSV file
  */
-abstract class AbstractRecordSet implements \ArrayAccess, \IteratorAggregate
+abstract class AbstractRecordSet implements \Countable, \ArrayAccess, \IteratorAggregate
 {
     /**
      * @var AbstractRecord[]
@@ -53,6 +53,9 @@ abstract class AbstractRecordSet implements \ArrayAccess, \IteratorAggregate
 
     public function offsetSet($offset, $value)
     {
+        if (is_null($offset)) {
+            $this->records[] = $value;
+        }
         $this->records[$offset] = $value;
     }
     
@@ -71,6 +74,17 @@ abstract class AbstractRecordSet implements \ArrayAccess, \IteratorAggregate
     {
         $this->headers = $headers;
     }
+    
+    /**
+     * {@inheritDoc}
+     * @see \Countable::count()
+     */
+    public function count()
+    {
+        return count($this->records); 
+        
+    }
+
 
 
     

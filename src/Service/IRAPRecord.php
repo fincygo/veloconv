@@ -21,6 +21,11 @@ class IRAPRecord extends AbstractRecord
     private $newId;
     
     /**
+     * @var integer
+     */
+    private $rank;
+    
+    /**
      * @var boolean
      */
     private $vertex;
@@ -49,7 +54,7 @@ class IRAPRecord extends AbstractRecord
         $this->vertex = false;
         $this->geometry = "";
         $this->record = array();
-       $this->latlong = array();
+        $this->latlong = array();
     }
     
     /**
@@ -153,6 +158,23 @@ class IRAPRecord extends AbstractRecord
             }
         }
     }
+    
+    /**
+     * @return number
+     */
+    public function getRank()
+    {
+        return $this->rank;
+    }
+
+    /**
+     * @param number $rank
+     */
+    public function setRank($rank)
+    {
+        $this->rank = $rank;
+    }
+
 
 }
 
