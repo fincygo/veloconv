@@ -2,7 +2,7 @@
 namespace App\Service;
 
 use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
-
+use App\Service\CSVConfig;
 
 /**
  *
@@ -11,14 +11,25 @@ use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
  */
 class CSVHandler
 {
-    const ERROR_CONFIG  = "Error while reading the fields configuration file.";
-    const ERROR_HEADER  = "Error in processing CSV header or header missing.";    
-    const ERROR_DATA    = "Error in processing data line.";
-    const ERROR_BADDATA = "Bad fileformat, the data does not match the header.";
-    const REGEX_FIELDS  = "/\"( (?:[^\"\\\\]++|\\\\.)*+ ) \" | ' ( (?:[^'\\\\]++|\\\\.)*+ ) ' | \( ( [^)]* ) \) | [\s#]+ /x ";
+    const ERROR_CONFIG            = "Error while reading the fields configuration file.";
+    const ERROR_HEADER            = "Error in processing CSV header or header missing.";    
+    const ERROR_DATA              = "Error in processing data line.";
+    const ERROR_BADDATA           = "Bad fileformat, the data does not match the header.";
+    const ERROR_TYPEMISMATCH      = "CSV file type not equal the specified type.";
+    const ERROR_CSVNOTOPEN        = "Open the CSV file first.";
 
-    const CSVT_IRAP = 1;
-    
+    const REGEX_FIELDS            = "/\"( (?:[^\"\\\\]++|\\\\.)*+ ) \" | ' ( (?:[^'\\\\]++|\\\\.)*+ ) ' | \( ( [^)]* ) \) | [\s#]+ /x ";
+
+    const CSVT_IRAP               = 1;
+    const CSVT_ECS_SURVEYS        = 2;
+    const CSVT_ECS_MINORSECTION   = 3;
+    const CSVT_ECS_POINTS         = 4;
+
+    /**
+     * @var CSVConfig
+     */
+    private $config;
+
     /**
      * @var string
      */
@@ -40,7 +51,7 @@ class CSVHandler
     /**
      * @var array
      */
-    private $hdrFields;
+    private $headerInfo;
 
     /**
      * @var object
@@ -64,109 +75,167 @@ class CSVHandler
     private $params;
 
     /**
+     * @var int
      */
+    private $firstDataLinePosition;
+
+    /**
+     * @var string
+     */
+    private $lastError;
+
+
+     //**************************************************************************************************************
     public function __construct( ContainerBagInterface $params )
+    //===============================================================================================================
     {
-        $this->params            = $params;
-        $this->fieldsDefinitions = false;
+        $this->params                = $params;
+        $this->fieldsDefinitions     = false;
+        $this->config                = new CSVConfig( $this->params );
+        $this->firstDataLinePosition = false;
     }
+    //**************************************************************************************************************
 
 
     //==============================================================================================================
-    public function loadConfig():bool
+    protected function setLasterror( string $error )
     //--------------------------------------------------------------------------------------------------------------
     //
-    {
-        if (is_array($this->fieldsDefinitions) && count($this->fieldsDefinitions) > 0 )
-            return true;
-
-        $fullConfigPath  =  $this->params->get('csv_header_configuration');
-        if ( false === ($cfgFields = \file_get_contents( $fullConfigPath )) )
-        {
-            throw new \RuntimeException( CSVHandler::ERROR_CONFIG );
-            return false;
-        }
-
-        return ( null !== ($this->fieldsDefinitions = json_decode( $cfgFields , true )) );
+    {    
+        $this->lastError = $error;
     }
-    //
     //==============================================================================================================
-    
+
 
     //==============================================================================================================
-    public function loadFile(string $filename):bool
+    public function openCSVFile( string $filename ):int 
     //--------------------------------------------------------------------------------------------------------------
+    // Open file, read header information and check type
     //
-    {
+    {        
         $this->filename = $filename;
         $fullFilePath   =  $this->params->get('csv_file_rootpath') . "/" . $this->filename;
         try
         {
-            $this->loadConfig();
+            if ( ! $this->config->isLoaded()  )
+                throw new \RuntimeException( CSVHandler::ERROR_CONFIG );
+
             $file = new \SplFileObject( $fullFilePath, "r") ;
-            $isHeaderDetected = false;
             while ( !$file->eof() )
             {
                 if ( empty( $line = trim( $file->fgets() )) )
                     continue;
 
-                if ( ! $isHeaderDetected )
-                {
-                    if ( false === $this->analyseHeader( $line ) )
-                        throw new \RuntimeException( CSVHandler::ERROR_HEADER );
-                    $isHeaderDetected = true;
-                }
-                else
-                {
-                    if ( false === $this->analyseData( $line ) )
-                        throw new \RuntimeException( CSVHandler::ERROR_DATA );
-                }
+                if ( false === $this->analyseHeader( $line ) )
+                   throw new \RuntimeException( CSVHandler::ERROR_HEADER );
+                $this->firstDataLinePosition = $file->ftell();
+                break;
             }
-        } catch( \RuntimeException $e )
+        } 
+        catch( \RuntimeException $e )
         {
-            echo "error: {$e->getMessage()}\n" ;
+            $this->setLastError( $e->getMessage() );
+            $this->firstDataLinePosition = false;
             $file = null;
             return false;
         }
+        
+        $file = null;
+        return $this->getType();        
+    }
+    //
+    //==============================================================================================================
+    public function loadCSVDataToRecordset( $recordSet )
+    //--------------------------------------------------------------------------------------------------------------
+    //
+    {
+        if ( empty($this->filename) || $this->firstDataLinePosition === false )
+        {
+            $this->setLastError( CSVHandler::ERROR_CSVNOTOPEN );
+            return false;
+        }
+        $fullFilePath   =  $this->params->get('csv_file_rootpath') . "/" . $this->filename;
+        try
+        {
+            if ( ! $this->config->isLoaded()  )
+                throw new \RuntimeException( CSVHandler::ERROR_CONFIG );
 
+            $file = new \SplFileObject( $fullFilePath, "r") ;
+            $file->fseek( $this->firstDataLinePosition );
+            $recno = 0;
+            while ( !$file->eof() )
+            {
+                if ( empty( $line = trim( $file->fgets() )) )
+                    continue;
+                
+                if ( false === ($aRecord = $this->analyseData( $line )) )
+                   throw new \RuntimeException( CSVHandler::ERROR_DATA );
+
+                ++$recno;
+                switch ($this->csvType)
+                {
+                    case CSVHandler::CSVT_IRAP:
+                        $this->addIRAPRecord( $recno, $recordSet, $aRecord );
+                        break;
+                    case CSVHandler::CSVT_ECS_SURVEYS:
+                        $this->addECSSurveyRecord( $recno, $recordSet, $aRecord );
+                        break;
+                    case CSVHandler::CSVT_ECS_MINORSECTION:
+                        $this->addECSSectionRecord( $recno, $recordSet, $aRecord );
+                        break;
+                    case CSVHandler::CSVT_ECS_POINTS:
+                        $this->addECSPointRecord( $recno, $recordSet, $aRecord );
+                        break;           
+                }
+                $aRecord = false;
+            }
+        } 
+        catch( \RuntimeException $e )
+        {
+            $this->setLastError( $e->getMessage() );
+            $this->firstDataLinePosition = false;
+            $file = null;
+            return false;
+        }
         $file = null;
         return true;        
     }
     //
-    //==============================================================================================================
-
-
-    //==============================================================================================================
-    public function checkTemplate( string $templateName ):bool
+    //==============================================================================================================    
+    public function addIRAPRecord( $recno, $recordset, $data )
     //--------------------------------------------------------------------------------------------------------------
+    //
     {
-        return ($this->csvTemplate && $this->csvTemplate == $templateName );             
+        $newRecord = new IRAPRecord($data);
+        $newRecord->setId( $recno );
+        $newRecord->setVertex( $recno === 1 );
+        $recordset->offsetSet( $recno-1, $newRecord );
     }
-    //==============================================================================================================
-    public function checkType( string $type ):bool
+    //
+    //==============================================================================================================    
+    public function addECSSurveyRecord( $recno, $recordset, $data )
     //--------------------------------------------------------------------------------------------------------------
+    //
     {
-        return ($this->csvType && $this->csvType == $type );
     }
-    //==============================================================================================================
-
-
-
-    //==============================================================================================================
-    protected function csvFieldName( string $name ):string
+    //
+    //==============================================================================================================    
+    public function addECSSectionRecord( $recno, $recordset, $data )
     //--------------------------------------------------------------------------------------------------------------
-    //  The names in the csv header are converted to standard data table column names. 
-    //  The capital letters are converted to small letters, 
-    //  special codes, e.g. spaces, “ ”, brackets, “(”, ”)”  slashes “/” , “\”, dashes “-” are replaced by underscore, “_”. 
-    //  Instead of multiple underscores only one is used, e.g. “<space><dash><space>“ converted to a single underscore ”_”. 
-    //  No underscore at the end of a column name, 
-    //  e.g. the column name of the irap.csv header “Vehicle flow (AADT)” is converted to “vehicle_flow_aadt”.
-    //    
+    //
     {
-        $pattern = "/['_','\-','\/','\\\',' ','(',')']+/i";
-        return  strtolower( trim( preg_replace($pattern, '_', $name ), '_' ));
     }
-    //==============================================================================================================
+    //
+    //==============================================================================================================    
+    public function addECSPointRecord( $recno, $recordset, $data )
+    //--------------------------------------------------------------------------------------------------------------
+    //
+    {
+    }
+    //
+    //==============================================================================================================    
+
+
 
 
     //==============================================================================================================
@@ -253,7 +322,7 @@ class CSVHandler
     }
     //==============================================================================================================
 
-
+     
 
     //==============================================================================================================    
     protected function detectCSVbyFieldset( $fields ):bool
@@ -267,37 +336,38 @@ class CSVHandler
     {
         $listInvalid     = array();
         $listTemplates   = array();
-        $listTypes       = array();
+        $listFileId      = array( 0=>0, 1=>0, 2=>0, 3=>0, 4=>0 );
         $hdrFields       = array();
 
         foreach ( $fields as $field )
-        {
-            $hdrFields[ $field ] = $this->csvFieldName( $field );
-            if ( false === ($aFieldDef = $this->findFieldDefinition( $hdrFields[ $field ]) ))
+        {            
+            $canonicalFieldName = $this->config->createCanonicalFieldName( $field ); 
+            $hdrFields[ $canonicalFieldName ] = $field;    //  hdrFields[<cononical field name>] = <original field name>
+            if ( false === ($aFieldDefs = $this->config->findFieldsByName( $field ) ))
             {
                 $listInvalid[] = $hdrFields[ $field ];
             }
             else
             {
-                if ( !array_key_exists( $aFieldDef["type"], $listTypes ) )
-                    $listTypes[ $aFieldDef["type"] ] = 0;
-                ++$listTypes[ $aFieldDef["type"] ];
+                foreach ($aFieldDefs as $fieldDef )
+                {
+                    if ( ($fidInd = $fieldDef->getFileId()) != -1 )                
+                        ++$listFileId[ $fidInd ];
                 
-                if ( !array_key_exists( $aFieldDef["filename"], $listTemplates ) )
-                    $listTemplates[ $aFieldDef["filename"] ] = 0;
-                ++$listTemplates[ $aFieldDef["filename"] ];
+                    if ( !array_key_exists( $fieldDef->getFileName(), $listTemplates ) )
+                        $listTemplates[ $fieldDef->getFileName() ] = 0;
+                    ++$listTemplates[ $fieldDef->getFileName() ];
+                }
             }
         }
-        arsort( $listTypes );
         arsort( $listTemplates );
+        arsort( $listFileId );
 
-        $this->csvType     = array_key_first( $listTypes     );
+        $this->csvType     = array_key_first( $listFileId    );
         $this->csvTemplate = array_key_first( $listTemplates );
-
-        $this->setHeaderFields( $hdrFields );
+        $this->setHeaderInfo( $hdrFields );
         
-        echo "found:" . array_key_first($listTypes) . " - " . array_key_first($listTemplates) . "\n";
-
+        //  echo "found:" . array_key_first($listFileId) . " - " . array_key_first($listTemplates) . "\n";
         return true;
     }
     //==============================================================================================================
@@ -305,57 +375,52 @@ class CSVHandler
 
 
     //==============================================================================================================    
-    protected function findFieldDefinition( $id ):?array
+    protected function setHeaderInfo( $fields )
     //--------------------------------------------------------------------------------------------------------------
-    {
-            if ( false === ($index = array_search( $id, array_column($this->fieldsDefinitions["fields"],"id") )))
-                return false;
-            return $this->fieldsDefinitions["fields"][$index];
-    }
-    //==============================================================================================================    
-
-
-
-
-    //==============================================================================================================
-    protected function createFieldsConfigFile( $field )
-    //--------------------------------------------------------------------------------------------------------------
-    // save to config file to all fileds in json
+    // set headerinfo 
+    // csv => conatines the field name from CSV. Maybe an unknown field name
+    // def => conatines the field deffinition from the config file for the csv field. false if csv is unknown field name
     //
     {
-        $strJson  = "{'id':'{$this->hdrFields[ $field ]}',";
-        $strJson .= "'name':'{$field}',";
-        $strJson .= "'type':'" . (strpos( $this->filename, "survey") === false && strpos( $this->filename, "minor") === false ? "IRAP" : "ECS") . "',";
-
-        $aPart    = explode( '/', $this->filename );
-        $aPart    = explode( '.', $aPart[1]);
-
-        $strJson .= "'filename':'{$aPart[0]}',";
-        $strJson .= "'default':0, 'converted':false },\n";
-
-        $fh = fopen("s:/munka/sabrina/data/csvheader.conf", "a");
-        fwrite( $fh, $strJson );
-        fclose($fh);
+        $this->headerInfo = array();
+        foreach ( $fields as $canonicalName => $originalName )
+        {
+            $data = array();
+            $data["csv"] = $originalName;
+            $data["def"] = $this->config->getFieldByName($this->csvType, $canonicalName );
+            $this->headerInfo[$canonicalName] = $data;
+        }
     }
-    //==============================================================================================================
+    //==============================================================================================================    
+    public function getHeaderInfo()
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        return $this->headerInfo;
+    }
+    //==============================================================================================================    
+    public function getNumberOfFields()
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        return (is_array( $this->headerInfo ) ? count( $this->headerInfo ) : 0);
+    }
+    //============================================================================================================== 
 
 
 
     //==============================================================================================================
-    protected function analyseData( $line ):bool
+    protected function analyseData( $line )
     //--------------------------------------------------------------------------------------------------------------
     {
         $fields = $this->splitByDelimiter( $line );
-        if ( count( $fields ) === count( $this->hdrFields )  ) 
+        if ( count( $fields ) === $this->getNumberOfFields()  ) 
         {
-            $fieldNames = array_keys( $this->hdrFields );
+            $fieldNames = array_keys( $this->headerInfo );
             $hdrIndex   = -1;
-
+            $aResult    = array();
             foreach ($fields as $value )
-            {
-                echo "{$this->hdrFields[ $fieldNames[++$hdrIndex] ]} = {$value} \n";
-            }
-            return true;
+                $aResult[ $fieldNames[++$hdrIndex] ] = $value;
+
+            return ( count($aResult) > 0 ? $aResult : false );
         }
         else
             throw new \RuntimeException( CSVHandler::ERROR_BADDATA );
@@ -363,5 +428,122 @@ class CSVHandler
         return false;
     }
     //==============================================================================================================
+
+
+    //==============================================================================================================
+    public function saveCSVFile( $nType, $fileName, $recordset ):bool
+    //--------------------------------------------------------------------------------------------------------------
+    // 
+    {
+        $this->filename = $fileName;
+        $fullFilePath   =  $this->params->get('csv_file_rootpath') . "/" . $this->filename;
+        try
+        {
+            if ( ! $this->config->isLoaded()  )
+                throw new \RuntimeException( CSVHandler::ERROR_CONFIG );
+            
+            $file = new \SplFileObject( $fullFilePath, "w");
+            //.......................................................................
+            //
+            $header = $this->config->getCSVFieldsByType( $nType );
+            $this->delimiter = ( $nType == CSVHandler::CSVT_IRAP ? ';' : ',' );
+            $line = "";
+            foreach ( $header as $field )
+            {
+                $line .= ( empty($line) ? "" : $this->delimiter ) . $field->getName();
+            }
+            $line .= "\r\n";
+            $file->fwrite( $line );
+            $file->fflush();
+            //
+            //.......................................................................
+            //
+            $records = $recordset->getRecords();
+            foreach ($records as $record )
+            {
+                $line = "";
+                foreach ( $header as $fields )
+                {
+                    $line .= ( empty($line) ? "" : $this->delimiter );                                        
+                    switch ( $fields->getDataType() )
+                    {
+                        case "date":
+                            $line .= sprintf( "%s", $record->getFieldValue( $fields->getCanonical() ) );
+                            break;
+                        case "string":
+                            $value = $record->getFieldValue( $fields->getCanonical() );
+                            if ( strpos($value, $this->delimiter ) !== false )
+                                $line .= sprintf( "%c%s%c", '"', $value, '"' );
+                            else
+                                $line .= sprintf( "%s", $value,  );
+                            break;
+                        default:
+                            $line .= sprintf( $fields->getFormat(), $record->getFieldValue( $fields->getCanonical() ) );
+                            break;
+                    }
+                }
+                $line .= "\r\n";
+                $file->fwrite( $line );
+                $file->fflush();                       
+            }
+        } 
+        catch( \RuntimeException $e )
+        {
+            $this->setLastError( $e->getMessage() );
+            $this->firstDataLinePosition = false;
+            $file = null;
+            return false;
+        }
+        
+        $file = null;             
+        return true;
+    }
+    //==============================================================================================================
+
+
+
+
+    //==============================================================================================================
+    public function getConfig():CSVConfig 
+    //--------------------------------------------------------------------------------------------------------------
+    // return the CSV type
+    {
+        return $this->config;
+    }
+    //==============================================================================================================
+    public function getType():int 
+    //--------------------------------------------------------------------------------------------------------------
+    // return the CSV type
+    {
+        return $this->csvType;
+    }
+    //==============================================================================================================
+    public function getTemplate():string
+    //--------------------------------------------------------------------------------------------------------------
+    // return the template name
+    {
+        return $this->csvTemplate;
+    }
+    //==============================================================================================================
+    public function checkTemplate( string $templateName ):bool
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        return ($this->csvTemplate && $this->csvTemplate == $templateName );             
+    }
+    //==============================================================================================================
+    public function checkType( string $type ):bool
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        return ($this->csvType && $this->csvType == $type );
+    }
+    //==============================================================================================================
+    public function getLastError():string
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        return $this->lastError;
+    }
+    //==============================================================================================================
+
+
 }
 

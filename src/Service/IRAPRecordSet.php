@@ -13,9 +13,9 @@ class IRAPRecordSet extends AbstractRecordSet
 
     /**
      */
-    public function __construct()
+    public function __construct(?array $headers)
     {
-        parent::__construct();
+        parent::__construct($headers);
     }
 }
 

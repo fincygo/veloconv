@@ -10,6 +10,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use App\Service\CSVHandler;
+USE App\Service\IRAPRecordSet;
 
 class testCommand extends Command
 {
@@ -38,10 +39,20 @@ class testCommand extends Command
     {
         $handler = new CSVHandler( $this->params );
 
+        if ( $handler->openCSVfile( "iRAP/irap-aggregated-export.csv" ) )
+        {
+            $IRAPrecords = new IRAPRecordSet( $handler->getHeaderInfo() );
+            $handler->loadCSVDataToRecordset( $IRAPrecords );
+            $handler->saveCSVFile(CSVHandler::CSVT_IRAP, "iRAP/irap-write-test.csv", $IRAPrecords );
+
+            //echo "LOADED RECORDS ".count($IRAPrecords)."\n";
+        }        
         //$handler->loadfile("iRAP/irap-aggregated-export.csv");
         //$handler->loadfile("ECS/minor_sections.csv");               
-        $handler->loadfile("ECS/surveys.csv");
-        //$handler->loadfile("ECS/survey_points_crossing_or_obstacle.csv");  
+        //$handler->loadfile("ECS/surveys.csv");
+        //$handler->loadfile("ECS/survey_points_crossing_or_obstacle.csv");
+        //echo $handler->getLastError();
+
         /*
         $handler->loadfile("ECS/survey_points_accommodation_or_food.csv");
         $handler->loadfile("ECS/survey_points_attraction.csv");
