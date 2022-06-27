@@ -297,6 +297,8 @@ class IrapToEcsConverter
                 ++$m;
             }
         }
+        // Delete marked rows
+        $this->deleteMarkedRows();
     }
 
     protected function generatingValuesOfSurveys() {
