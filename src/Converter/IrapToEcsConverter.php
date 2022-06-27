@@ -107,8 +107,9 @@ class IrapToEcsConverter
         $irapheader = array();
 
         $this->irapSet = new IRAPRecordSet($irapheader);
+        $this->irapSet->setCsvType(CSVHandler::CSVT_IRAP);
         
-        if (!$this->csvhandler->loadFile($this->irapSet)) {
+        if (!$this->csvhandler->loadCSVDataToRecordset($this->irapSet)) {
             return false;
         }
         
@@ -118,6 +119,7 @@ class IrapToEcsConverter
         $this->spoSet->setCsvType(CSVHandler::CSVT_ECS_POINTS);
         /** @var \App\Service\IRAPRecord $irap */
         $lastRow = array();
+        $serial = 1;
         foreach ($this->irapSet as $irap) {
             // Ranking
             $this->calculateRankForRows($irap, $lastRow);
@@ -125,9 +127,9 @@ class IrapToEcsConverter
             if ($irap->getFieldvalue('pedestrian_crossing_inspected_road') != 7 && $irap->getFieldvalue('intersection_type') != 12) {
                 $spo = new SPointsOrObstacleRecord($spoheader);
                 
-                $spo->setFieldvalue('id', $irap->getId());
+                $spo->setFieldvalue('id', $serial);
                 $spo->setFieldvalue('survey_id', 0);
-                $spo->setFieldvalue('road_survey_date', $irap->getFieldvalue('road_survey_date'));
+                $spo->setFieldvalue('minor_section_id', $irap->getId());
                 $spo->setFieldvalue('kilometre_section', $irap->getFieldvalue('distance'));
                 $spo->setFieldvalue('date', $irap->getFieldvalue('road_survey_date'));
                 $spo->setFieldvalue('log_position_lat', $irap->getFieldvalue('latitude'));
@@ -135,6 +137,7 @@ class IrapToEcsConverter
                 $spo->setFieldvalue('comment', $irap->getFieldvalue('comments'));
                 
                 $this->spoSet[] = $spo;
+                ++$serial;
             }
         }
         
@@ -210,7 +213,28 @@ class IrapToEcsConverter
     }
     
     protected function mergeZeroRankedRows() {
-        ;
+        $count = count($this->irapSet);
+        $n = 0;
+        while ($n < $count-1) {
+            /** @var IRAPRecord $cur */
+            $cur = $this->irapSet[$n];
+            $cur->addLatlongPoint($cur->getFieldvalue('longitude'), $cur->getFieldvalue('latitude'), $this->averageHeight);
+            /** @var IRAPRecord $next */
+            $m = $n+1;
+            $next = $this->irapSet[$m];
+            // Calculate lenghts in meter unit
+            while ($m < $count-1 && $next->getRank() == 0 && (($cur->getFieldvalue('length')+$next->getFieldvalue('length')) * 1000) < ($this->maxLength-$this->minLength)) {
+                $cur->setFieldvalue('length', $cur->getFieldvalue('length')+$next->getFieldvalue('length'));
+                if ($next->isVertex()) {
+                    $cur->addLatlongPoint($next->getFieldvalue('longitude'), $next->getFieldvalue('latitude'), $this->averageHeight);
+                }
+                $next->setDeleted(true);
+                ++$m;
+                $next = $this->irapSet[$m];
+            }
+            $cur->addLatlongPoint($next->getFieldvalue('longitude'), $next->getFieldvalue('latitude'), $this->averageHeight);
+            $n = $m;
+        }
     }
     
     protected function mergeShortLengthRows() {
@@ -291,6 +315,30 @@ class IrapToEcsConverter
     public function setMaxLength($maxLength)
     {
         $this->maxLength = $maxLength;
+    }
+    
+    /**
+     * @return \App\Service\SPointsOrObstacleRecordSet
+     */
+    public function getSpoSet()
+    {
+        return $this->spoSet;
+    }
+
+    /**
+     * @return \App\Service\SurveyRecordSet
+     */
+    public function getSurveySet()
+    {
+        return $this->surveySet;
+    }
+
+    /**
+     * @return \App\Service\MinorSectionRecordSet
+     */
+    public function getMinorSet()
+    {
+        return $this->minorSet;
     }
 
     
