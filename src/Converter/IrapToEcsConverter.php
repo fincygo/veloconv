@@ -199,9 +199,9 @@ class IrapToEcsConverter
             $m = $n+1;
             while ($m < $count-1) {
                 $dist = $geo->crossArc(
-                    $this->irapSet[$n]->getFieldvalue('latitude'), $this->irapSet[$n]->$irap->getFieldvalue('longitude'),
-                    $this->irapSet[$m+1]->getFieldvalue('latitude'), $this->irapSet[$m+1]->$irap->getFieldvalue('longitude'),
-                    $this->irapSet[$m]->getFieldvalue('latitude'), $this->irapSet[$m]->$irap->getFieldvalue('longitude')
+                    $this->irapSet[$n]->getFieldvalue('latitude'), $this->irapSet[$n]->getFieldvalue('longitude'),
+                    $this->irapSet[$m+1]->getFieldvalue('latitude'), $this->irapSet[$m+1]->getFieldvalue('longitude'),
+                    $this->irapSet[$m]->getFieldvalue('latitude'), $this->irapSet[$m]->getFieldvalue('longitude')
                 );
                 if ($dist > $div) {
                     $this->irapSet[$m]->setVertex(true);
