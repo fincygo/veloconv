@@ -201,6 +201,10 @@ class ConvertProcess
 
                     if ( $converter->processIrapFile() )
                     {
+                        $outputPath = getPath( $this->inputFilePath );
+                        $outputFileName = $outputPath . "/" . $inputHandle->getConfig->getTemplateNameByType( CSVHandler::CSVT_ECS_SURVEYS ) . ".csv";
+                        $inputHandle->saveCSVFile(CSVHandler::CSVT_ECS_SURVEYS, $outputFileName, $converter->getSurveySet() );
+                        ...
                         return true;
                     }
 
