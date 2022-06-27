@@ -7,6 +7,8 @@ use App\Service\IRAPRecordSet;
 use App\Service\SPointsOrObstacleRecord;
 use App\Service\IRAPRecord;
 use App\GeoUtils\GeoUtils;
+use App\Service\SurveyRecordSet;
+use App\Service\MinorSectionRecordSet;
 
 /**
  *
@@ -55,22 +57,22 @@ class IrapToEcsConverter
     protected $csvhandler;
     
     /**
-     * @var CSVHandler
+     * @var IRAPRecordSet
      */
     protected $irapSet;
     
     /**
-     * @var CSVHandler
+     * @var SPointsOrObstacleRecordSet
      */
     protected $spoSet;
     
     /**
-     * @var CSVHandler
+     * @var SurveyRecordSet
      */
     protected $surveySet;
     
     /**
-     * @var CSVHandler
+     * @var MinorSectionRecordSet
      */
     protected $minorSet;
     
@@ -111,9 +113,9 @@ class IrapToEcsConverter
         }
         
         // Generating Columns of the survey_points_crossing_or_obstacle
-        // TODO: configból fefl kell tölteni
-        $spoheader = array();
+        $spoheader = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_POINTS);
         $this->spoSet = new SPointsOrObstacleRecordSet($spoheader);
+        $this->spoSet->setCsvType(CSVHandler::CSVT_ECS_POINTS);
         /** @var \App\Service\IRAPRecord $irap */
         $lastRow = array();
         foreach ($this->irapSet as $irap) {
@@ -140,7 +142,7 @@ class IrapToEcsConverter
         $this->identifyVertices();
         
         // ​4.3.1.9.​ Merge Zero Ranked Rows
-        
+        $this->mergeZeroRankedRows();
         
     }
     

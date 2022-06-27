@@ -20,6 +20,11 @@ abstract class AbstractRecordSet implements \Countable, \ArrayAccess, \IteratorA
     private $headers;
 
     /**
+     * @var integer
+     */
+    private $csvType;
+    
+    /**
      */
     public function __construct(?array $headers)
     {
@@ -84,6 +89,23 @@ abstract class AbstractRecordSet implements \Countable, \ArrayAccess, \IteratorA
         return count($this->records); 
         
     }
+    
+    /**
+     * @return number
+     */
+    public function getCsvType()
+    {
+        return $this->csvType;
+    }
+
+    /**
+     * @param number $csvType
+     */
+    public function setCsvType($csvType)
+    {
+        $this->csvType = $csvType;
+    }
+
 
 
 
