@@ -475,7 +475,7 @@ class CSVHandler
                             if ( strpos($value, $this->delimiter ) !== false )
                                 $line .= sprintf( "%c%s%c", '"', $value, '"' );
                             else
-                                $line .= sprintf( "%s", $value,  );
+                                $line .= sprintf( "%s", $value );
                             break;
                         default:
                             $line .= sprintf( $fields->getFormat(), $record->getFieldValue( $fields->getCanonical() ) );
