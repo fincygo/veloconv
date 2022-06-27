@@ -53,7 +53,6 @@ class IRAPRecord extends AbstractRecord
         $this->newId = 0;
         $this->vertex = false;
         $this->geometry = "";
-        $this->record = array();
         $this->latlong = array();
     }
     

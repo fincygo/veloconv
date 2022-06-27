@@ -19,7 +19,7 @@ abstract class AbstractRecord
     public function __construct(?array $fields)
     {
         if (null !== $fields) {
-            $this->records = $fields;
+            $this->fields = $fields;
         }
     }
     
@@ -32,7 +32,7 @@ abstract class AbstractRecord
     {
         $value = null;
         if (array_key_exists($name, $this->fields)) {
-            $value = $this->fields['name'];
+            $value = $this->fields[ $name ];
         }
         // TODO: else throw log error
         
