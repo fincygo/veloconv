@@ -235,10 +235,52 @@ class IrapToEcsConverter
             $cur->addLatlongPoint($next->getFieldvalue('longitude'), $next->getFieldvalue('latitude'), $this->averageHeight);
             $n = $m;
         }
+        $cur = $this->irapSet[$count-1]; $cur->setDeleted(true);
     }
     
     protected function mergeShortLengthRows() {
-        ;
+        $count = count($this->irapSet);
+        $n = 0;
+        while ($n < $count-1) {
+            /** @var IRAPRecord $cur */
+            $cur = $this->irapSet[$n];
+            $m = $n+1;
+            while ($cur->getFieldvalue('length') < $this->minLength) {
+                while ($m < $count-1 && $this->irapSet[$m]->isDeleted()) ++$m;
+                if ($m < $count-1) {
+                    /** @var IRAPRecord $next */
+                    $next = $this->irapSet[$m];
+                    $bMethod = 0;
+                    if ($next->getRank() < $cur->getRank()) {
+                        $bMethod = 0;
+                    }
+                    elseif ($cur->getRank() < $next->getRank()) {
+                        $bMethod = 1;
+                    }
+                    else {
+                        if ($next->getFieldvalue('length') < $cur->getFieldvalue('length')) {
+                            $bMethod = 0;
+                        }
+                        else {
+                            $bMethod = 1;
+                        }
+                    }
+                    if ($bMethod == 0) {
+                        $cur->mergeWKTPoints($next->getLatlong());
+                        $cur->setFieldvalue('length', $next->getFieldvalue('length') + $cur->getFieldvalue('length'));
+                        $next->setDeleted(true);
+                        
+                    } else {
+                        $next->mergeWKTPoints($cur->getLatlong(), false);
+                        $next->setFieldvalue('length', $next->getFieldvalue('length') + $cur->getFieldvalue('length'));
+                        $cur->setDeleted(true);
+                        $cur = $next;
+                    }
+                }
+                $n = $m;
+                ++$m;
+            }
+        }
     }
 
     protected function generatingValuesOfSurveys() {
