@@ -115,6 +115,7 @@ class CSVHandler
     {        
         $this->filename = $filename;
         $fullFilePath   =  $this->params->get('csv_file_rootpath') . "/" . $this->filename;
+echo  "openCSVFile: {$fullFilePath} \n";
         try
         {
             if ( ! $this->config->isLoaded()  )
@@ -139,7 +140,6 @@ class CSVHandler
             $file = null;
             return false;
         }
-        
         $file = null;
         return $this->getType();        
     }
@@ -301,7 +301,7 @@ class CSVHandler
     //
     // we accept comma semicolon and tab separators only.
     // 
-    {
+    {  
         $delimiters = array("comma" => ',', "semi" => ';', "tab" => '\t');
         $cntr       = array("comma" =>  substr_count($line, $delimiters["comma"] ),
                             "semi"  =>  substr_count($line, $delimiters["semi"]  ),
@@ -366,8 +366,7 @@ class CSVHandler
         $this->csvType     = array_key_first( $listFileId    );
         $this->csvTemplate = array_key_first( $listTemplates );
         $this->setHeaderInfo( $hdrFields );
-        
-        //  echo "found:" . array_key_first($listFileId) . " - " . array_key_first($listTemplates) . "\n";
+        // echo "found:" . array_key_first($listFileId) . " - " . array_key_first($listTemplates) . "\n";
         return true;
     }
     //==============================================================================================================

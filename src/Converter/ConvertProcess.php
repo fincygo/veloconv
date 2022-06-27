@@ -1,6 +1,7 @@
 <?php
 namespace App\Converter;
 
+use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use App\Service\CSVHandler;
 
 /**
@@ -10,11 +11,16 @@ use App\Service\CSVHandler;
  */
 class ConvertProcess
 {
+    const EXT_IRAP           = "-test.csv";
+    const EXT_ECS            = "-test.dsv";
 
     const ERRCP_OPEN         = array( "code" => -1, "message" => "Input file can't process. Invalid file format or open error." );
     const ERRCP_ECS_TYPE     = array( "code" => -2, "message" => "iRAP conversion detected but the converter assumes records for the minor section of the ECS survey." );    
     const ERRCP_IRAP_PROCESS = array( "code" => -3, "message" => "Error in ECS to iRAP conversion." );
     const ERRCP_ECS_PROCESS  = array( "code" => -4, "message" => "Error in iRAP to ECS conversion." );
+    const ERRCP_ECS_OUTPUT   = array( "code" => -5, "message" => "Converted ECS file can`t create." );    
+    const ERRCP_IRAPS_OUTPUT = array( "code" => -6, "message" => "Converted IRAP file can`t create." );        
+
     /**
      * For the LINESTRING z parameter
      *
@@ -68,6 +74,10 @@ class ConvertProcess
      */
     protected $outputType;
   
+    /**
+     * @var array
+     */
+    protected $procError;
     
     /**
      * @return string
@@ -166,23 +176,55 @@ class ConvertProcess
         $this->outputType = $type;
     }
 
+    /**
+     * @param array $err
+     */
+    public function setError($err)
+    {
+        $this->procError = $err;
+    }
+
+    protected function clearError()
+    {
+        $this->procError = array();
+    }
+
+    public function getError():array
+    {
+        return $this->procError;
+    }
+
+    public function getErrorCode():int
+    {
+        return  ( array_key_exists("code", $this->procError) ? $this->procError["code"] : 0 );
+    }
+
+    public function getErrorMessage():string
+    {
+        return  ( array_key_exists("message", $this->procError) ? $this->procError["message"] : 0 );        
+    }
+
 
     //***************************************************************************************************************
     public function __construct( ContainerBagInterface $params )
     //===============================================================================================================
     {
-        $this->params = $params;
+        $this->params        = $params;
+        $this->procError     = array();
     }
     //***************************************************************************************************************
 
 
+
     //===============================================================================================================
-    public function doConvert( $userParams ):bool
+    public function doConvert( string $fileName, array $userParams ):bool
     //--------------------------------------------------------------------------------------------------------------
     //
     {
+        $this->clearError();
+        $this->setInputFilePath( $fileName );
         $inputHandle = new CSVHandler( $this->params );
-        if ( false === ($this->inputType = $inputHandle->openCSVFile( $this->inputFilePath )) )
+        if ( false !== ($this->inputType = $inputHandle->openCSVFile( $this->inputFilePath )) )
         {
             switch ($this->inputType)
             {
@@ -201,27 +243,47 @@ class ConvertProcess
 
                     if ( $converter->processIrapFile() )
                     {
-                        $outputPath = getPath( $this->inputFilePath );
-                        $outputFileName = $outputPath . "/" . $inputHandle->getConfig->getTemplateNameByType( CSVHandler::CSVT_ECS_SURVEYS ) . ".csv";
-                        $inputHandle->saveCSVFile(CSVHandler::CSVT_ECS_SURVEYS, $outputFileName, $converter->getSurveySet() );
-                        ...
-                        return true;
+                        $outputPath = pathinfo( $this->inputFilePath, PATHINFO_DIRNAME );
+                        $outputFileName = $outputPath . "/" . $inputHandle->getConfig->getTemplateNameByType( CSVHandler::CSVT_ECS_SURVEYS ) . ConvertProcess::EXT_ECS;
+                        if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_ECS_SURVEYS, $outputFileName, $converter->getSurveySet() ) )
+                        {
+                            $outputFileName = $outputPath . "/" . $inputHandle->getConfig->getTemplateNameByType( CSVHandler::CSVT_ECS_MINORSECTION ) . ConvertProcess::EXT_ECS;
+                            if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_ECS_MINORSECTION, $outputFileName, $converter->getMinorSet() ) )
+                            {
+                                $outputFileName = $outputPath . "/" . $inputHandle->getConfig->getTemplateNameByType( CSVHandler::CSVT_ECS_POINTS ) . ConvertProcess::EXT_ECS;
+                                if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_ECS_POINTS, $outputFileName, $converter->getSpoSet() ) )
+                                {
+                                    $inputHandle = false;
+                                    return true;
+                                }
+                            }
+                        } 
+                        $this->setError( ConvertProcess::ERRCP_ECS_OUTPUT );
+                        break;
                     }
 
-                    $this->setError( ERRCP_IRAP_PROCESS );
+                    $this->setError( ConvertProcess::ERRCP_IRAP_PROCESS );
                     break;
 
                 case CSVHandler::CSVT_ECS_MINORSECTION:    
+                    $converter = new EcsToIrapConverter( $inputHandle, $this->outputFilePath );
+                    if ( $converter->processECSFile() )
+                    {
+                        
+                    }
+                    $this->setError( ConvertProcess::ERRCP_ECS_PROCESS );
                     break;
 
                 case CSVHandler::CSVT_ECS_SURVEYS:    
                 case CSVHandler::CSVT_ECS_MINORSECTION:
-                    $this->setError( ERRCP_ECS_TYPE );
+                    $this->setError( ConvertProcess::ERRCP_ECS_TYPE );
                     break;                    
             }
         }
         else
-            $this->setError( ERRCP_OPEN );
+            $this->setError( ConvertProcess::ERRCP_OPEN );
+
+        $inputHandle = false;
         return false;
     }
     //===============================================================================================================
