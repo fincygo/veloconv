@@ -224,6 +224,9 @@ echo  "openCSVFile: {$fullFilePath} \n";
     //--------------------------------------------------------------------------------------------------------------
     //
     {
+        $newRecord = new MinorSectionRecord($data);
+        //$newRecord->setId( $recno );
+        $recordset->offsetSet( $recno-1, $newRecord );
     }
     //
     //==============================================================================================================    
@@ -458,12 +461,13 @@ echo  "openCSVFile: {$fullFilePath} \n";
             //.......................................................................
             //
             $records = $recordset->getRecords();
+            $nField  = 0;
             foreach ($records as $record )
             {
                 $line = "";
                 foreach ( $header as $fields )
                 {
-                    $line .= ( empty($line) ? "" : $this->delimiter );                                        
+                    $line .= ( ++$nField == 1 ? "" : $this->delimiter );                                        
                     switch ( $fields->getDataType() )
                     {
                         case "date":
@@ -501,9 +505,8 @@ echo  "openCSVFile: {$fullFilePath} \n";
 
 
 
-
     //==============================================================================================================
-    public function getConfig():CSVConfig 
+    public function getConfig():CSVConfig
     //--------------------------------------------------------------------------------------------------------------
     // return the CSV type
     {

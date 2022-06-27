@@ -41,7 +41,13 @@ class testCommand extends Command
     {
 
         $process = new ConvertProcess( $this->params );
+        /*
         if ( ! $process->doConvert( "iRAP/irap-aggregated-export.csv", array() ) )
+        {
+            echo "ERROR: ".$process->getErrorMessage(). "\n";
+        }
+        */
+        if ( ! $process->doConvert( "ECS/minor_sections.csv", array() ) )
         {
             echo "ERROR: ".$process->getErrorMessage(). "\n";
         }

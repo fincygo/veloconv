@@ -86,8 +86,7 @@ abstract class AbstractRecordSet implements \Countable, \ArrayAccess, \IteratorA
      */
     public function count()
     {
-        return count($this->records); 
-        
+        return count($this->records);         
     }
     
     /**

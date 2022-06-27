@@ -252,7 +252,8 @@ class IrapToEcsConverter
     
     protected function deleteMarkedRows()
     {
-        $irapSet = new IRAPRecordSet($irapheader);
+        $irapheader = array();
+        $irapSet    = new IRAPRecordSet($irapheader);
         $irapSet->setCsvType(CSVHandler::CSVT_IRAP);
         $irapSet->setHeaders($this->irapSet->getHeaders());
         /** @var IRAPRecord $irap */

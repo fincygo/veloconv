@@ -244,13 +244,13 @@ class ConvertProcess
                     if ( $converter->processIrapFile() )
                     {
                         $outputPath = pathinfo( $this->inputFilePath, PATHINFO_DIRNAME );
-                        $outputFileName = $outputPath . "/" . $inputHandle->getConfig->getTemplateNameByType( CSVHandler::CSVT_ECS_SURVEYS ) . ConvertProcess::EXT_ECS;
+                        $outputFileName = $outputPath . "/" . $inputHandle->getConfig()->getTemplateNameByType( CSVHandler::CSVT_ECS_SURVEYS ) . ConvertProcess::EXT_ECS;
                         if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_ECS_SURVEYS, $outputFileName, $converter->getSurveySet() ) )
                         {
-                            $outputFileName = $outputPath . "/" . $inputHandle->getConfig->getTemplateNameByType( CSVHandler::CSVT_ECS_MINORSECTION ) . ConvertProcess::EXT_ECS;
+                            $outputFileName = $outputPath . "/" . $inputHandle->getConfig()->getTemplateNameByType( CSVHandler::CSVT_ECS_MINORSECTION ) . ConvertProcess::EXT_ECS;
                             if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_ECS_MINORSECTION, $outputFileName, $converter->getMinorSet() ) )
                             {
-                                $outputFileName = $outputPath . "/" . $inputHandle->getConfig->getTemplateNameByType( CSVHandler::CSVT_ECS_POINTS ) . ConvertProcess::EXT_ECS;
+                                $outputFileName = $outputPath . "/" . $inputHandle->getConfig()->getTemplateNameByType( CSVHandler::CSVT_ECS_POINTS ) . ConvertProcess::EXT_ECS;
                                 if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_ECS_POINTS, $outputFileName, $converter->getSpoSet() ) )
                                 {
                                     $inputHandle = false;
@@ -269,7 +269,13 @@ class ConvertProcess
                     $converter = new EcsToIrapConverter( $inputHandle, $this->outputFilePath );
                     if ( $converter->processECSFile() )
                     {
-                        
+                        $outputPath = pathinfo( $this->inputFilePath, PATHINFO_DIRNAME );
+                        $outputFileName = $outputPath . "/" . $inputHandle->getConfig()->getTemplateNameByType( CSVHandler::CSVT_IRAP ) . ConvertProcess::EXT_IRAP;
+                        if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_IRAP, $outputFileName, $converter->getIRAPSet() ) )
+                        {
+                            $inputHandle = false;
+                            return true;
+                        }
                     }
                     $this->setError( ConvertProcess::ERRCP_ECS_PROCESS );
                     break;
