@@ -199,9 +199,9 @@ class IrapToEcsConverter
             $m = $n+1;
             while ($m < $count-1) {
                 $dist = $geo->crossArc(
-                    $this->irapSet[$n]->$irap->getFieldvalue('latitude'), $this->irapSet[$n]->$irap->getFieldvalue('longitude'),
-                    $this->irapSet[$m+1]->$irap->getFieldvalue('latitude'), $this->irapSet[$m+1]->$irap->getFieldvalue('longitude'),
-                    $this->irapSet[$m]->$irap->getFieldvalue('latitude'), $this->irapSet[$m]->$irap->getFieldvalue('longitude')
+                    $this->irapSet[$n]->getFieldvalue('latitude'), $this->irapSet[$n]->$irap->getFieldvalue('longitude'),
+                    $this->irapSet[$m+1]->getFieldvalue('latitude'), $this->irapSet[$m+1]->$irap->getFieldvalue('longitude'),
+                    $this->irapSet[$m]->getFieldvalue('latitude'), $this->irapSet[$m]->$irap->getFieldvalue('longitude')
                 );
                 if ($dist > $div) {
                     $this->irapSet[$m]->setVertex(true);
@@ -236,6 +236,25 @@ class IrapToEcsConverter
             $n = $m;
         }
         $cur = $this->irapSet[$count-1]; $cur->setDeleted(true);
+        // Delete marked rows
+        $this->deleteMarkedRows();
+    }
+    
+    protected function deleteMarkedRows()
+    {
+        $irapSet = new IRAPRecordSet($irapheader);
+        $irapSet->setCsvType(CSVHandler::CSVT_IRAP);
+        $irapSet->setHeaders($this->irapSet->getHeaders());
+        /** @var IRAPRecord $irap */
+        foreach ($this->irapSet as &$irap) {
+            if ($irap->isDeleted()) {
+                unset($irap);
+            }
+            else {
+                $irapSet[] = $irap;
+            }
+        }
+        $this->irapSet = $irapSet;
     }
     
     protected function mergeShortLengthRows() {
@@ -245,37 +264,34 @@ class IrapToEcsConverter
             /** @var IRAPRecord $cur */
             $cur = $this->irapSet[$n];
             $m = $n+1;
-            while ($cur->getFieldvalue('length') < $this->minLength) {
-                while ($m < $count-1 && $this->irapSet[$m]->isDeleted()) ++$m;
-                if ($m < $count-1) {
-                    /** @var IRAPRecord $next */
-                    $next = $this->irapSet[$m];
+            while ($m < $count && $cur->getFieldvalue('length') < $this->minLength) {
+                /** @var IRAPRecord $next */
+                $next = $this->irapSet[$m];
+                $bMethod = 0;
+                if ($next->getRank() < $cur->getRank()) {
                     $bMethod = 0;
-                    if ($next->getRank() < $cur->getRank()) {
+                }
+                elseif ($cur->getRank() < $next->getRank()) {
+                    $bMethod = 1;
+                }
+                else {
+                    if ($next->getFieldvalue('length') < $cur->getFieldvalue('length')) {
                         $bMethod = 0;
                     }
-                    elseif ($cur->getRank() < $next->getRank()) {
+                    else {
                         $bMethod = 1;
                     }
-                    else {
-                        if ($next->getFieldvalue('length') < $cur->getFieldvalue('length')) {
-                            $bMethod = 0;
-                        }
-                        else {
-                            $bMethod = 1;
-                        }
-                    }
-                    if ($bMethod == 0) {
-                        $cur->mergeWKTPoints($next->getLatlong());
-                        $cur->setFieldvalue('length', $next->getFieldvalue('length') + $cur->getFieldvalue('length'));
-                        $next->setDeleted(true);
-                        
-                    } else {
-                        $next->mergeWKTPoints($cur->getLatlong(), false);
-                        $next->setFieldvalue('length', $next->getFieldvalue('length') + $cur->getFieldvalue('length'));
-                        $cur->setDeleted(true);
-                        $cur = $next;
-                    }
+                }
+                if ($bMethod == 0) {
+                    $cur->mergeWKTPoints($next->getLatlong());
+                    $cur->setFieldvalue('length', $next->getFieldvalue('length') + $cur->getFieldvalue('length'));
+                    $next->setDeleted(true);
+                    
+                } else {
+                    $next->mergeWKTPoints($cur->getLatlong(), false);
+                    $next->setFieldvalue('length', $next->getFieldvalue('length') + $cur->getFieldvalue('length'));
+                    $cur->setDeleted(true);
+                    $cur = $next;
                 }
                 $n = $m;
                 ++$m;
