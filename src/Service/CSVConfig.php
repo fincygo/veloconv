@@ -144,4 +144,24 @@ class CSVConfig
         return ( count($aResult) > 0 ? $aResult : false );
     }
     //==============================================================================================================    
+
+
+    //==============================================================================================================    
+    public function getCSVFieldArrayByType( int $type )
+    //--------------------------------------------------------------------------------------------------------------
+    {
+        if ( ($this->isLoaded === false) )
+            return false;
+
+        $aResult = array();            
+        foreach ($this->fieldsDefinitions as $field )
+        {
+            if ($field->getFileId() == $type )
+                $aResult[ $field->getCanonical() ] = null;
+        }
+        
+        return ( count($aResult) > 0 ? $aResult : false );
+    }
+    //==============================================================================================================    
+
 }
