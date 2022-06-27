@@ -31,6 +31,11 @@ class IRAPRecord extends AbstractRecord
     private $vertex;
     
     /**
+     * @var boolean
+     */
+    private $deleted;
+    
+    /**
      * @var string
      */
     private $geometry;
@@ -173,6 +178,23 @@ class IRAPRecord extends AbstractRecord
     {
         $this->rank = $rank;
     }
+    
+    /**
+     * @return boolean
+     */
+    public function isDeleted()
+    {
+        return $this->deleted;
+    }
+
+    /**
+     * @param boolean $deleted
+     */
+    public function setDeleted($deleted)
+    {
+        $this->deleted = $deleted;
+    }
+
 
 
 }

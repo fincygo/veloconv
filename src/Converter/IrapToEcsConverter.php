@@ -229,5 +229,70 @@ class IrapToEcsConverter
         ;
     }
     
+    /**
+     * @return string
+     */
+    public function getAverageHeight()
+    {
+        return $this->averageHeight;
+    }
+
+    /**
+     * @return number
+     */
+    public function getMaxDivergence()
+    {
+        return $this->maxDivergence;
+    }
+
+    /**
+     * @return number
+     */
+    public function getMinLength()
+    {
+        return $this->minLength;
+    }
+
+    /**
+     * @return number
+     */
+    public function getMaxLength()
+    {
+        return $this->maxLength;
+    }
+
+    /**
+     * @param string $averageHeight
+     */
+    public function setAverageHeight($averageHeight)
+    {
+        $this->averageHeight = $averageHeight;
+    }
+
+    /**
+     * @param number $maxDivergence
+     */
+    public function setMaxDivergence($maxDivergence)
+    {
+        $this->maxDivergence = $maxDivergence;
+    }
+
+    /**
+     * @param number $minLength
+     */
+    public function setMinLength($minLength)
+    {
+        $this->minLength = $minLength;
+    }
+
+    /**
+     * @param number $maxLength
+     */
+    public function setMaxLength($maxLength)
+    {
+        $this->maxLength = $maxLength;
+    }
+
+    
 }
 
