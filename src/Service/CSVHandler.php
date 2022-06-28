@@ -115,7 +115,7 @@ class CSVHandler
     {        
         $this->filename = $filename;
         $fullFilePath   =  $this->params->get('csv_file_rootpath') . "/" . $this->filename;
-echo  "openCSVFile: {$fullFilePath} \n";
+
         try
         {
             if ( ! $this->config->isLoaded()  )
@@ -209,7 +209,7 @@ echo  "openCSVFile: {$fullFilePath} \n";
         $newRecord = new IRAPRecord($data);
         $newRecord->setId( $recno );
         $newRecord->setVertex( $recno === 1 );
-        $recordset->offsetSet( $recno-1, $newRecord );
+        $recordset[] = $newRecord;
     }
     //
     //==============================================================================================================    
@@ -226,7 +226,7 @@ echo  "openCSVFile: {$fullFilePath} \n";
     {
         $newRecord = new MinorSectionRecord($data);
         //$newRecord->setId( $recno );
-        $recordset->offsetSet( $recno-1, $newRecord );
+        $recordset[] = $newRecord;
     }
     //
     //==============================================================================================================    
@@ -460,11 +460,15 @@ echo  "openCSVFile: {$fullFilePath} \n";
             //
             //.......................................................................
             //
-            $records = $recordset->getRecords();
-            $nField  = 0;
-            foreach ($records as $record )
+            //$records = $recordset->getRecords();            
+            //foreach ( $recordset as $record )
+            $nIndex = -1;
+echo "number of records:" . count($recordset) ;
+            while (++$nIndex < count($recordset) )
             {
-                $line = "";
+                $record  = $recordset[$nIndex];
+                $nField  = 0;
+                $line    = "";
                 foreach ( $header as $fields )
                 {
                     $line .= ( ++$nField == 1 ? "" : $this->delimiter );                                        
@@ -487,7 +491,7 @@ echo  "openCSVFile: {$fullFilePath} \n";
                 }
                 $line .= "\r\n";
                 $file->fwrite( $line );
-                $file->fflush();                       
+                $file->fflush();       
             }
         } 
         catch( \RuntimeException $e )

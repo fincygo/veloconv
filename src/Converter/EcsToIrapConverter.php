@@ -43,6 +43,11 @@ class EcsToIrapConverter
     protected $IRAPSet;
 
     /**
+     * @var IRAPRecordSet
+     */
+    protected $TempSet;
+
+    /**
      * @var int
      */
     protected $IRAPSerial;
@@ -50,8 +55,17 @@ class EcsToIrapConverter
     /**
      * @var int
      */
+    protected $TempSerial;
+
+    /**
+     * @var int
+     */
     protected $calculatedDistance;
 
+    /**
+     * @var GeoUtils
+     */
+    protected $GeoUtils;
 
     /**
      */
@@ -60,6 +74,7 @@ class EcsToIrapConverter
         $this->csvhandler    = $csvhandler;
         $this->segmentLength = EcsToIrapConverter::DEFA_SEGMENTLENGTH;
         $this->IRAPSerial    = 0;
+        $this->GeoUtils      = new GeoUtils();                            
     }
 
 
@@ -75,27 +90,102 @@ class EcsToIrapConverter
         }
 
         $irapHeader       =  $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_IRAP);
+        $irapFieldList    = array_keys($irapHeader);
+
+        $this->TempSet    = new IRAPRecordSet( $irapHeader );
+        $this->TempSet->setCsvType(CSVHandler::CSVT_IRAP);        
+
         $this->IRAPSet    = new IRAPRecordSet( $irapHeader );
         $this->IRAPSet->setCsvType(CSVHandler::CSVT_IRAP);        
 
-        $this->IRAPSerial = 0;
+        $this->TempSerial         = 0;
+        $this->IRAPSerial         = 0;
         $this->calculatedDistance = 0;
-        foreach ($this->minorSet as $minor) 
+        foreach ($this->minorSet as $index => $minor) 
         {
            $aPoints = $this->getPointsFromLineString( $minor->getFieldvalue('geometry') );
            if ( count($aPoints) > 0 )
            {
+                if ( $index < count($this->minorSet)-1 ) // remove the last point if not the last record
+                    array_pop( $aPoints );               // because the next record first point is equal the previouse record last point.
+
                 foreach ( $aPoints as $point )
-                    $this->addIRAPRecordByPoint( $point, $minor, $irapHeader );
+                    $this->addTempRecordByPoint( $point, $minor, $irapHeader );
 
                 //
                 // calculate he length
-                // ......
-                // split the section
-                // ......
-                //
+                // 
+                $prevRecord               = false;    
+                $this->calculatedDistance = 0;
+                $length                   = 0;
+                foreach ( $this->TempSet as $TempRecord )                    
+                {
+                    if ( false !== $prevRecord )
+                    {
+                        $prevRecord->setFieldValue( 'length', ($length = $this->calculateLength( $prevRecord, $TempRecord )) / 1000. );
+                        $this->calculatedDistance += ( $length / 1000. );
+                        if ( $length > $this->segmentLength )
+                        {
+                            // echo "Need to interpolate {$length}  {$this->segmentLength}\n";
+                            $newPoints = $this->GeoUtils->splitArc( floatval( $prevRecord->getFieldValue("latitude")), floatval( $prevRecord->getFieldValue("longitude")),
+                                                                    floatval( $TempRecord->getFieldValue("latitude")), floatval( $TempRecord->getFieldValue("longitude")),
+                                                                    $this->segmentLength );
+                            foreach ($newPoints as $newPoint )
+                            {
+                                // echo "   > add newpoint ". $newPoint["lat"] . " " . $newPoint["lon"] . "\n";
+
+                                ++$this->IRAPSerial;
+                                $IRAPRecord = new IRAPRecord( $irapHeader );  
+                                $IRAPRecord->setId( $this->IRAPSerial );
+
+                                foreach ($irapFieldList as $field )
+                                    $IRAPRecord->setFieldvalue( $field, $prevRecord->getFieldvalue($field) );                                
+                               
+                                $IRAPRecord->setFieldValue("latitude",  $newPoint["lat"] );
+                                $IRAPRecord->setFieldValue("longitude", $newPoint["lon"] );
+                                $IRAPRecord->setFieldvalue("comments", "Interpolated from an ECS microsections file" );
+                                $this->IRAPSet[] = $IRAPRecord;
+                            }
+                           
+                        }
+                        // else // maybe do it always
+                        {
+                            //
+                            // Simple add the template record to the IRAP recordset with a new IRAP id
+                            //
+                            ++$this->IRAPSerial;
+                            $TempRecord->setId( $this->IRAPSerial );
+                            $this->IRAPSet[] = $TempRecord;
+                        }
+
+                    }
+                    $TempRecord->setFieldValue( 'distance', $this->calculatedDistance );
+                    $prevRecord = $TempRecord;
+                }                                                             
            }
         }
+
+        //
+        // recalculate the IRAP lengths / distances
+        //
+
+        $prevRecord               = false; 
+        $this->calculatedDistance = 0;
+        $length                   = 0;
+        foreach ( $this->IRAPSet as &$IRAPRecord )                    
+        {
+            if ( false !== $prevRecord )
+            {
+                $prevRecord->setFieldValue( 'length', ($length = $this->calculateLength( $prevRecord, $IRAPRecord )) / 1000. );
+                $this->calculatedDistance += ( $length / 1000. );            
+            }                     
+            $IRAPRecord->setFieldValue( 'distance', $this->calculatedDistance );        
+$IRAPRecord->setFieldValue( 'motorcycle_facilities', $IRAPRecord->getId() );                     
+            $prevRecord = $IRAPRecord;            
+        }
+
+        //
+        //
         return true;
     }
 
@@ -125,24 +215,23 @@ class EcsToIrapConverter
         return $aPoints;
     }
 
-    protected function addIRAPRecordByPoint( $point, $minor, $irapHeader )
+    protected function addTempRecordByPoint( $point, $minor, $irapHeader )
     {
-        ++$this->IRAPSerial;
-        $IRAPRecord = new IRAPRecord( $irapHeader );        
-        $IRAPRecord->setId( $this->IRAPSerial );
-        $IRAPRecord->setFieldvalue("road_survey_date", $this->setIRAPDate( $minor->getFieldValue("date")));
-        $IRAPRecord->setFieldvalue("distance",         $this->calculatedDistance );
+        ++$this->TempSerial;
+        $TempRecord = new IRAPRecord( $irapHeader );        
+        $TempRecord->setId( $this->TempSerial );
+        $TempRecord->setFieldvalue("road_survey_date", $this->setIRAPDate( $minor->getFieldValue("date")));
+        $TempRecord->setFieldvalue("distance",         $this->calculatedDistance );
         $this->calculatedDistance += floatval( $minor->getFieldValue("length") );
-    // $IRAPRecord->setFieldvalue("lengh",  $point["X"] ); need to calculate
-        $IRAPRecord->setFieldvalue("latitude",  $point["X"] );
-        $IRAPRecord->setFieldvalue("longitude", $point["Y"] );
-        $IRAPRecord->setFieldvalue("comments", "Converted from an ECS microsections file" );
-        $IRAPRecord->setFieldvalue("speed_limit", $this->getSpeedLimit( intval( $minor->getFieldValue("i2_traffic_speed")) ) );
-        $IRAPRecord->setFieldvalue("bicycle_facility", $this->setBicycleFacility( $minor->getFieldValue("i2_type") ) );
-        $IRAPRecord->setFieldvalue("skid_resistance_grip", $this->setSkidResistanceGrip( $minor->getFieldValue("i2_type"), $minor->getFieldValue("i3_surface_type") ) );
-        $IRAPRecord->setFieldvalue("vehicle_flow_aadt", $minor->getFieldValue("i2_traffic_volume") );
+        $TempRecord->setFieldvalue("latitude",  $point["Y"] );
+        $TempRecord->setFieldvalue("longitude", $point["X"] );
+        $TempRecord->setFieldvalue("comments", "Converted from an ECS microsections file" );
+        $TempRecord->setFieldvalue("speed_limit", $this->getSpeedLimit( intval( $minor->getFieldValue("i2_traffic_speed")) ) );
+        $TempRecord->setFieldvalue("bicycle_facility", $this->setBicycleFacility( $minor->getFieldValue("i2_type") ) );
+        $TempRecord->setFieldvalue("skid_resistance_grip", $this->setSkidResistanceGrip( $minor->getFieldValue("i2_type"), $minor->getFieldValue("i3_surface_type") ) );
+        $TempRecord->setFieldvalue("vehicle_flow_aadt", $minor->getFieldValue("i2_traffic_volume") );
 
-        $this->IRAPSet->offsetSet( $this->IRAPSerial-1, $IRAPRecord );
+        $this->TempSet[] = $TempRecord;
     }
 
     protected function setIRAPDate( $value )
@@ -170,14 +259,14 @@ class EcsToIrapConverter
         if ( $value <   30 )  return  1;        
     }
 
-    protected function setBicycleFacility( string $faciliy )
+    protected function setBicycleFacility( string $faciliy ):string
     {
         if ( strcmp( strtolower($faciliy), "painted cycle lane") == 0 )  return "2";
         if ( strcmp( strtolower($faciliy), "cycle and pedestrian path") == 0 )  return "7";
         return "";
     }
 
-    protected function setSkidResistanceGrip( string $facility, string $grip )
+    protected function setSkidResistanceGrip( string $facility, string $grip ):string
     {
         if ( (strcmp( strtolower($facility), "public road") == 0) ||
              (strcmp( strtolower($facility), "painted cycle lane") == 0) ||
@@ -191,6 +280,14 @@ class EcsToIrapConverter
             if ( (strcmp( strtolower($grip), "stabilised gravel") == 0)  )  return "4";
         }
         return "";
+    }
+
+    protected function calculateLength( $prevRecord, $IRAPrecord ):float
+    {        
+        $distance = $this->GeoUtils->dist( deg2rad( floatval($prevRecord->getFieldValue("latitude" )) ),  deg2rad( floatval($prevRecord->getFieldValue("longitude")) ),
+                                           deg2rad( floatval($IRAPrecord->getFieldValue("latitude" )) ),  deg2rad( floatval($IRAPrecord->getFieldValue("longitude")) ));
+        
+        return $distance;                                       
     }
 
 

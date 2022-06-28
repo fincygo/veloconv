@@ -31,7 +31,7 @@ class testCommand extends Command
     
 
     public function __construct(string $name = null, ContainerBagInterface $params, LoggerInterface $logger)
-    {
+    { 
         $this->logger = $logger;
         $this->params = $params;
         parent::__construct($name);
@@ -39,7 +39,6 @@ class testCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-
         $process = new ConvertProcess( $this->params );
         /*
         if ( ! $process->doConvert( "iRAP/irap-aggregated-export.csv", array() ) )
@@ -51,6 +50,7 @@ class testCommand extends Command
         {
             echo "ERROR: ".$process->getErrorMessage(). "\n";
         }
+        echo "---- end of converting ----\n\n\n";
 
         /*
         $handler = new CSVHandler( $this->params );
