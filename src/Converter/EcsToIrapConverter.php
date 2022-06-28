@@ -3,7 +3,7 @@ namespace App\Converter;
 
 use App\Service\CSVHandler;
 use App\Service\SPointsOrObstacleRecordSet;
-use App\Service\IRAPRecordSet;
+// use App\Service\IRAPRecordSet;
 use App\Service\SPointsOrObstacleRecord;
 use App\Service\IRAPRecord;
 use App\GeoUtils\GeoUtils;
@@ -32,18 +32,18 @@ class EcsToIrapConverter
 
 
     /**
-     * @var MinorSectionRecordSet
+     * @var array()
      */
     protected $minorSet;
 
 
     /**
-     * @var IRAPRecordSet
+     * @var array()
      */
     protected $IRAPSet;
 
     /**
-     * @var IRAPRecordSet
+     * @var array()
      */
     protected $TempSet;
 
@@ -82,8 +82,8 @@ class EcsToIrapConverter
     public function processECSFile() : bool
     {
         $minorHeader    =  $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_MINORSECTION);        
-        $this->minorSet = new MinorSectionRecordSet( $minorHeader );
-        $this->minorSet->setCsvType(CSVHandler::CSVT_ECS_MINORSECTION);
+        $this->minorSet = array(); //new MinorSectionRecordSet( $minorHeader );
+        // $this->minorSet->setCsvType(CSVHandler::CSVT_ECS_MINORSECTION);
         
         if (!$this->csvhandler->loadCSVDataToRecordset($this->minorSet)) {
             return false;

@@ -145,7 +145,7 @@ class CSVHandler
     }
     //
     //==============================================================================================================
-    public function loadCSVDataToRecordset( $recordSet )
+    public function loadCSVDataToRecordset( &$recordSet )
     //--------------------------------------------------------------------------------------------------------------
     //
     {
@@ -175,10 +175,10 @@ class CSVHandler
                 switch ($this->csvType)
                 {
                     case CSVHandler::CSVT_IRAP:
-                        $this->addIRAPRecord( $recno, $recordSet, $aRecord );
+                        $this->addIRAPRecord( $recno, &$recordSet, $aRecord );
                         break;
                     case CSVHandler::CSVT_ECS_SURVEYS:
-                        $this->addECSSurveyRecord( $recno, $recordSet, $aRecord );
+                        $this->addECSSurveyRecord( $recno,&$recordSet, $aRecord );
                         break;
                     case CSVHandler::CSVT_ECS_MINORSECTION:
                         $this->addECSSectionRecord( $recno, $recordSet, $aRecord );
@@ -202,7 +202,7 @@ class CSVHandler
     }
     //
     //==============================================================================================================    
-    public function addIRAPRecord( $recno, $recordset, $data )
+    public function addIRAPRecord( $recno, &$recordset, $data )
     //--------------------------------------------------------------------------------------------------------------
     //
     {
