@@ -42,19 +42,18 @@ class GeoUtils
         $latB = deg2rad($latDest);  $lonB = deg2rad($lonDest);
 
         $bearing = $this->bear($latA, $lonA, $latB, $lonB);
-        $dist = $this->dist($latA, $lonA, $latB, $lonB);
+        $dist    = $this->dist($latA, $lonA, $latB, $lonB);
         
         $newSplit = $split;
-        while ($dist > $newSplit) {
+        while ($dist > $newSplit) 
+        {
             $point = $this->calcDest($latA, $lonA, $bearing, $newSplit);
             foreach ($point as &$p) {
                 $p = rad2deg($p);
-            }
-            $dest[] = $point;
-        
+            }            
+            $dest[] = $point;        
             $newSplit += $split;
-        }
-    
+        }    
         return $dest;
     }
     
