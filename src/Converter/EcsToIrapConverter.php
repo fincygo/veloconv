@@ -8,6 +8,7 @@ use App\Service\IRAPRecord;
 use App\GeoUtils\GeoUtils;
 use App\Service\SurveyRecordSet;
 use App\Service\MinorSectionRecordSet;
+use App\Service\IRAPRecordSet;
 
 /**
  *
