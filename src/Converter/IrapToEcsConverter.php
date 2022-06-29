@@ -11,6 +11,7 @@ use App\Service\SurveyRecordSet;
 use App\Service\MinorSectionRecordSet;
 use App\Service\SurveyRecord;
 use App\Service\MinorSectionRecord;
+use Symfony\Flex\Unpack\Result;
 
 /**
  *
@@ -29,6 +30,29 @@ class IrapToEcsConverter
     const NAME_MINLENGTH     = "minlength";
     const NAME_MAXLENGTH     = "maxlength";
     
+    const SPEED_LIMIT = [
+        1 => '<30km/h',
+        3 => '40km/h',
+        5 => '50km/h',
+        7 => '60km/h',
+        9 => '70km/h',
+        11 => '80km/h',
+        13 => '90km/h',
+        15 => '100km/h',
+        17 => '110km/h',
+        19 => '120km/h',
+        21 => '130km/h',
+        23 => '140km/h',
+        25 => '>=150km/h',
+        31 => '<20mph',
+        33 => '30mph',
+        35 => '40mph',
+        37 => '50mph',
+        39 => '60mph',
+        41 => '70mph',
+        43 => '80mph',
+        45 => '>=90mph',
+        ];
 
     /**
      * For the LINESTRING z parameter
@@ -406,22 +430,137 @@ class IrapToEcsConverter
         /** @var IRAPRecord $irap */
         $irap = $this->irapSet[count($this->irapSet)-1];
         
-        $rec = new MinorSectionRecord($header);
         /** @var IRAPRecord $irap */
         foreach ($this->irapSet as $irap) {
+            $rec = new MinorSectionRecord($header);
+            
             $rec->setFieldvalue('id', $irap->getId());
             $rec->setFieldvalue('survey_id', $this->surveyId);
             $rec->setFieldvalue('index', $irap->getId());
             $date = \DateTime::createFromFormat('j.n.Y', $irap->getFieldvalue('road_survey_date'));
             $rec->setFieldvalue('date', $date->format(DATE_ATOM));
             $rec->setFieldvalue('length', $irap->getFieldvalue('length'));
-            $rec->setFieldvalue('i1_legal', $value);
+            $rec->setFieldvalue('i1_legal', $this->getI1legalValue($irap));
+            $rec->setFieldvalue('i2_type', $this->getI2Type($irap));
+            $rec->setFieldvalue('i2_direction', $this->getI2Direction($irap, $rec));
+            $rec->setFieldvalue('i2_traffic_volume', $irap->getFieldvalue('vehicle_flow_aadt'));
+            $rec->setFieldvalue('i2_traffic_speed', self::SPEED_LIMIT[$irap->getFieldvalue('speed_limit')]);
+            $rec->setFieldvalue('i3_surface_type', $this->getI3SurfaceType($irap));
+            $rec->setFieldvalue('i2_traffic_category', $this->getI2TrafficCategory($irap));
+            $rec->setFieldvalue('comment', $this->createMinorComment($irap));
+            $rec->setFieldvalue('log_position_y', $irap->getFieldvalue('latitude'));
+            $rec->setFieldvalue('log_position_x', $irap->getFieldvalue('longitude'));
+            $rec->setFieldvalue('geometry', $this->makeWKTLinestring($irap->getLatlong()));
+            
+            $this->minorSet[] = $rec;
         }
     }
     
-    protected function getL1legalValue(IRAPRecord $irap): string
+    protected function createMinorComment(IRAPRecord $irap): string
     {
+        $values = [];
+        $values[] = $irap->getFieldvalue('image_reference ');
+        $values[] = $irap->getFieldvalue('road_name ');
+        $values[] = $irap->getFieldvalue('section ');
         
+        return implode(';', $values);
+    }
+    
+    protected function getI2TrafficCategory(IRAPRecord $irap): string
+    {
+        $result = '';
+        
+        $aadt = $irap->getFieldvalue('vehicle_flow_aadt');
+        if ($aadt < 500) {
+            $result = 'low';
+        }
+        elseif ($aadt >= 500 && $aadt < 10000) {
+            $result = 'moderated';
+        }
+        elseif ($aadt  >= 10000) {
+            $result = 'high';
+        }
+
+        return $result;
+    }
+    
+    protected function getI3SurfaceType(IRAPRecord $irap): string
+    {
+        $result = 'unknow';
+        
+        $bicycle_facility = $irap->getFieldvalue('bicycle_facility');
+        $skid = $irap->getFieldvalue('skid_resistance_grip');
+        if ($bicycle_facility >= 3 && $bicycle_facility <= 6) {
+            switch ($skid) {
+                case 1:
+                case 2:
+                case 3:
+                    $result = 'asphalt/concrete';
+                    break;
+                case 4:
+                    $result = 'stabilised grave';
+                    break;
+                case 5:
+                    $result = 'gravel/dirt';
+                    break;
+                default:
+                    $result = 'unknow';
+            }
+        }
+
+        return $result;
+    }
+    
+    protected function getI2Direction(IRAPRecord $irap, MinorSectionRecord $rec): string
+    {
+        $type = $rec->getFieldvalue(i2_type);
+        $median = $irap->getFieldvalue('median_type');
+        
+        $result ='two-way';
+        if ($type == 'Public road' && $median == 13) {
+            $result ='one-way';;
+        }
+        
+        return $result;
+    }
+    
+    protected function getI1legalValue(IRAPRecord $irap): string
+    {
+        $code = $irap->getFieldvalue('carriageway_label');
+        $lanes = $irap->getFieldvalue('number_of_lanes');
+        $bphf = $irap->getFieldvalue('bicyclist_peak_hourly_flow');
+        $speed = $irap->getFieldvalue('speed_limit');
+        
+        if ($code != 3 && $lanes >= 2 && (is_null($bphf) || 0 == $bphf) && $speed >= 17) {
+            $result = 'Entry forbidden';
+        }
+        else {
+            $result = 'cyclingAllowed';
+        }
+        
+        return $result;
+    }
+    
+    protected function getI2Type(IRAPRecord $irap) : string
+    {
+        $result = 'unknow';
+        $bicycle_facility = $irap->getFieldvalue('bicycle_facility');
+        $vehicle_flow_aadt = $irap->getFieldvalue('vehicle_flow_aadt');
+        $pedestrian_observed = $irap->getFieldvalue('pedestrian_observed_flow_along_the_road_passenger_side ');
+        
+        if ($bicycle_facility >= 4 && $bicycle_facility <= 6 && $vehicle_flow_aadt > 0) {
+            $result = 'Public road';
+        }
+        elseif ($bicycle_facility == 3 && $vehicle_flow_aadt > 0) {
+            $result = 'Painted cycle lane';
+        }
+        elseif (($bicycle_facility == 1 || $bicycle_facility == 2 || $bicycle_facility == 7) && $vehicle_flow_aadt > 0) {
+            $result = 'Cycle path';
+            if ($bicycle_facility != 2 && $pedestrian_observed > 0) {
+                $result = 'Cycle and pedestrian path';
+            }
+        }
+        return $result;
     }
     
     protected function makeWKTLinestring(array $points): string
