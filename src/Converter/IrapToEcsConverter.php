@@ -223,22 +223,31 @@ class IrapToEcsConverter
             if ($lastRow['speed_limit'] != $irap->getFieldvalue('speed_limit')) {
                 ++$rank;
             }
+            $lastRow['speed_limit'] = $irap->getFieldvalue('speed_limit');
+            
             if ($lastRow['bicycle_facility'] != $irap->getFieldvalue('bicycle_facility')) {
                 ++$rank;
             }
+            $lastRow['bicycle_facility'] = $irap->getFieldvalue('bicycle_facility');
+            
             if ($lastRow['number_of_lanes'] != $irap->getFieldvalue('number_of_lanes')) {
                 ++$rank;
             }
             if ($lastRow['lane_width'] != $irap->getFieldvalue('lane_width')) {
                 ++$rank;
             }
+            $lastRow['lane_width'] = $irap->getFieldvalue('lane_width');
+            
             if ($lastRow['road_condition'] != $irap->getFieldvalue('road_condition')) {
                 ++$rank;
             }
+            $lastRow['road_condition'] = $irap->getFieldvalue('road_condition');
+            
             if ($lastRow['skid_resistance_grip'] != $irap->getFieldvalue('skid_resistance_grip')) {
                 ++$rank;
             }
-
+            $lastRow['skid_resistance_grip'] = $irap->getFieldvalue('skid_resistance_grip');
+            
             $irap->setRank($rank);
         }
     }
@@ -265,6 +274,7 @@ class IrapToEcsConverter
                     $this->irapSet[$m]->setVertex(true);
                     break;
                 }
+                ++$m;
             }
             $n = $m;
         }
@@ -293,7 +303,8 @@ class IrapToEcsConverter
             $cur->addLatlongPoint($next->getFieldvalue('longitude'), $next->getFieldvalue('latitude'), $this->averageHeight);
             $n = $m;
         }
-        $cur = $this->irapSet[$count-1]; $cur->setDeleted(true);
+        $next = $this->irapSet[$count-1]; $next->setDeleted(true);
+        $cur->addLatlongPoint($next->getFieldvalue('longitude'), $next->getFieldvalue('latitude'), $this->averageHeight);
         // Delete marked rows
         $this->deleteMarkedRows();
     }
@@ -367,8 +378,8 @@ class IrapToEcsConverter
             // update distance
             $distance += $cur->getFieldvalue('length');
             $cur->setFieldvalue('distance', $distance);
-            $spo = $spo = $this->spoSet[$nSpo];
-            if ($n < $count-1) {
+            if ($n < $count-1 && $nSpo < $spoCount) {
+                $spo = $this->spoSet[$nSpo];
                 $next = $this->irapSet[$n];
                 while ($nSpo < $spoCount && $spo->getFieldvalue('minor_section_id') < $next->getId()) {
                     $spo->setFieldvalue('minor_section_id', $serial);
@@ -410,6 +421,8 @@ class IrapToEcsConverter
         $record->setFieldvalue('minor_section_count', count($this->irapSet));
         $record->setFieldvalue('point_count', count($this->spoSet));
         $record->setFieldvalue('daily_section_id', '1');
+        
+        $this->surveySet[] = $record;
     }
     
     protected function generatingValuesOfMinorSection() {
@@ -502,7 +515,7 @@ class IrapToEcsConverter
     
     protected function getI2Direction(IRAPRecord $irap, MinorSectionRecord $rec): string
     {
-        $type = $rec->getFieldvalue(i2_type);
+        $type = $rec->getFieldvalue('i2_type');
         $median = $irap->getFieldvalue('median_type');
         
         $result ='two-way';
