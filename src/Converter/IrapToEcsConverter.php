@@ -124,7 +124,7 @@ class IrapToEcsConverter
     
     /**
      */
-    public function __construct(CSVHandler $csvhandler, $avgHeight = 0, $maxDiv = 1.0, $minLen = 200, $maxLen = 5000, $surveyId = 1)
+    public function __construct(CSVHandler $csvhandler)
     {
         $this->averageHeight = IrapToEcsConverter::DEFA_AVGHEIGHT;
         $this->maxDivergence = IrapToEcsConverter::DEFA_MAXDIVERGENCE;
@@ -216,6 +216,11 @@ class IrapToEcsConverter
         // 4.3.2.4.​ Finalising Data of the survey_points_crossing_or_obstacle
         $this->mergeShortLengthRows();
         
+        $this->generatingValuesOfSurveys();
+        
+        $this->generatingValuesOfMinorSection();
+        
+        return true;
     }
     
     protected function calculateRankForRows(IRAPRecord $irap, array &$lastRow)
