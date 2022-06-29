@@ -93,22 +93,22 @@ class IrapToEcsConverter
     protected $csvhandler;
     
     /**
-     * @var IRAPRecordSet
+     * @var array
      */
     protected $irapSet;
     
     /**
-     * @var SPointsOrObstacleRecordSet
+     * @var array
      */
     protected $spoSet;
     
     /**
-     * @var SurveyRecordSet
+     * @var array
      */
     protected $surveySet;
     
     /**
-     * @var MinorSectionRecordSet
+     * @var array
      */
     protected $minorSet;
     
@@ -140,17 +140,17 @@ class IrapToEcsConverter
     
     public function processIrapFile() : bool
     {
-        $this->irapSet = new IRAPRecordSet();
-        $this->irapSet->setCsvType(CSVHandler::CSVT_IRAP);
-        
+        $this->irapSet = [];
+        //$this->irapSet->setCsvType(CSVHandler::CSVT_IRAP);
+        /*
         if (!$this->csvhandler->loadCSVDataToRecordset($this->irapSet)) {
             return false;
         }
-        
+        */
         // Generating Columns of the survey_points_crossing_or_obstacle
         $spoheader = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_POINTS);
-        $this->spoSet = new SPointsOrObstacleRecordSet($spoheader);
-        $this->spoSet->setCsvType(CSVHandler::CSVT_ECS_POINTS);
+        $this->spoSet = [];
+        //$this->spoSet->setCsvType(CSVHandler::CSVT_ECS_POINTS);
         /** @var \App\Service\IRAPRecord $irap */
         $lastRow = array();
         $serial = 1;
@@ -300,9 +300,9 @@ class IrapToEcsConverter
     
     protected function deleteMarkedRows()
     {
-        $irapSet = new IRAPRecordSet();
-        $irapSet->setCsvType(CSVHandler::CSVT_IRAP);
-        $irapSet->setHeaders($this->irapSet->getHeaders());
+        $irapSet = [];
+        //$irapSet->setCsvType(CSVHandler::CSVT_IRAP);
+        //$irapSet->setHeaders($this->irapSet->getHeaders());
         /** @var IRAPRecord $irap */
         foreach ($this->irapSet as &$irap) {
             if ($irap->isDeleted()) {
@@ -393,8 +393,8 @@ class IrapToEcsConverter
 
     protected function generatingValuesOfSurveys() {
         $header = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_SURVEYS);
-        $this->surveySet = new SurveyRecordSet($header);
-        $this->surveySet->setCsvType(CSVHandler::CSVT_ECS_SURVEYS);
+        $this->surveySet = [];
+        //$this->surveySet->setCsvType(CSVHandler::CSVT_ECS_SURVEYS);
         /** @var IRAPRecord $irap */
         $irap = $this->irapSet[count($this->irapSet)-1];
         
@@ -414,8 +414,8 @@ class IrapToEcsConverter
     
     protected function generatingValuesOfMinorSection() {
         $header = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_MINORSECTION);
-        $this->minorSet = new MinorSectionRecordSet($header);
-        $this->minorSet->setCsvType(CSVHandler::CSVT_ECS_MINORSECTION);
+        $this->minorSet = [];
+        //$this->minorSet->setCsvType(CSVHandler::CSVT_ECS_MINORSECTION);
         /** @var IRAPRecord $irap */
         $irap = $this->irapSet[count($this->irapSet)-1];
         
@@ -627,7 +627,7 @@ class IrapToEcsConverter
     }
     
     /**
-     * @return \App\Service\SPointsOrObstacleRecordSet
+     * @return array
      */
     public function getSpoSet()
     {
@@ -635,7 +635,7 @@ class IrapToEcsConverter
     }
 
     /**
-     * @return \App\Service\SurveyRecordSet
+     * @return array
      */
     public function getSurveySet()
     {
@@ -643,7 +643,7 @@ class IrapToEcsConverter
     }
 
     /**
-     * @return \App\Service\MinorSectionRecordSet
+     * @return array
      */
     public function getMinorSet()
     {
