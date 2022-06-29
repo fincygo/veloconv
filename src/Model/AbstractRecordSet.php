@@ -65,6 +65,16 @@ abstract class AbstractRecordSet implements \Countable, \ArrayAccess, \IteratorA
     }
     
     /**
+     * {@inheritDoc}
+     * @see \Countable::count()
+     */
+    public function count()
+    {
+        return count($this->records);
+        
+    }
+    
+    /**
      * @return array
      */
     public function getHeaders() : array
@@ -78,16 +88,6 @@ abstract class AbstractRecordSet implements \Countable, \ArrayAccess, \IteratorA
     public function setHeaders(array $headers)
     {
         $this->headers = $headers;
-    }
-    
-    /**
-     * {@inheritDoc}
-     * @see \Countable::count()
-     */
-    public function count()
-    {
-        return count($this->records); 
-        
     }
     
     /**
