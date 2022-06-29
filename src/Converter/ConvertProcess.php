@@ -222,7 +222,7 @@ class ConvertProcess
     //--------------------------------------------------------------------------------------------------------------
     //
     {
-echo "---- start convert ----\n";        
+// echo "---- start convert ----\n";        
         $this->clearError();
         $this->setInputFilePath( $fileName );
         $inputHandle = new CSVHandler( $this->params );
@@ -273,7 +273,7 @@ echo "---- start convert ----\n";
                     {
                         $outputPath = pathinfo( $this->inputFilePath, PATHINFO_DIRNAME );
                         $outputFileName = $outputPath . "/" . $inputHandle->getConfig()->getTemplateNameByType( CSVHandler::CSVT_IRAP ) . ConvertProcess::EXT_IRAP;
-echo "output: {$outputFileName}\n";                        
+                        // echo "output: {$outputFileName}\n";                        
                         if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_IRAP, $outputFileName, $converter->getIRAPSet() ) )
                         {
                             $inputHandle = false;

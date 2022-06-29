@@ -48,9 +48,9 @@ class testCommand extends Command
         */
         if ( ! $process->doConvert( "ECS/minor_sections.csv", array() ) )
         {
-            echo "ERROR: ".$process->getErrorMessage(). "\n";
+            // echo "ERROR: ".$process->getErrorMessage(). "\n";
         }
-        echo "---- end of converting ----\n\n\n";
+        //echo "---- end of converting ----\n\n\n";
 
         /*
         $handler = new CSVHandler( $this->params );
@@ -79,7 +79,7 @@ class testCommand extends Command
         $handler->loadfile("ECS/survey_points_signing.csv");
         $handler->loadfile("ECS/surveys.csv");
         */
-        $output->writeln('end of test.');
+        // $output->writeln('end of test.');
         return Command::SUCCESS;
     }
 }

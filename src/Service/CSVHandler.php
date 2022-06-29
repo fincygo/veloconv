@@ -154,7 +154,7 @@ class CSVHandler
             $this->setLastError( CSVHandler::ERROR_CSVNOTOPEN );
             return false;
         }
-        $fullFilePath   =  $this->params->get('csv_file_rootpath') . "/" . $this->filename;
+        $fullFilePath = $this->params->get('csv_file_rootpath') . "/" . $this->filename;
         try
         {
             if ( ! $this->config->isLoaded()  )
@@ -213,24 +213,23 @@ class CSVHandler
     }
     //
     //==============================================================================================================    
-    public function addECSSurveyRecord( $recno, $recordset, $data )
+    public function addECSSurveyRecord( $recno, &$recordset, $data )
     //--------------------------------------------------------------------------------------------------------------
     //
     {
     }
     //
     //==============================================================================================================    
-    public function addECSSectionRecord( $recno, $recordset, $data )
+    public function addECSSectionRecord( $recno, &$recordset, $data )
     //--------------------------------------------------------------------------------------------------------------
     //
     {
         $newRecord = new MinorSectionRecord($data);
-        //$newRecord->setId( $recno );
-        $recordset[] = $newRecord;
+        $recordset[] = $newRecord;      
     }
     //
     //==============================================================================================================    
-    public function addECSPointRecord( $recno, $recordset, $data )
+    public function addECSPointRecord( $recno, &$recordset, $data )
     //--------------------------------------------------------------------------------------------------------------
     //
     {
@@ -463,7 +462,6 @@ class CSVHandler
             //$records = $recordset->getRecords();            
             //foreach ( $recordset as $record )
             $nIndex = -1;
-echo "number of records:" . count($recordset) ;
             while (++$nIndex < count($recordset) )
             {
                 $record  = $recordset[$nIndex];

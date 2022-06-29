@@ -6,7 +6,7 @@
 parameters:
     csv_header_configuration: '%kernel.project_dir%/config/headers.conf'
     #csv_header_configuration: '../config/headers.conf'
-    csv_file_rootpath: '%env(CSV_FILEPATH)%'
+    csv_file_rootpath: '%env(CSV_FILEPATH)%'    
 
 services:
     # default configuration for services in *this* file
