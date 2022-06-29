@@ -26,7 +26,7 @@ abstract class AbstractRecordSet implements \Countable, \ArrayAccess, \IteratorA
     
     /**
      */
-    public function __construct(?array $headers)
+    public function __construct(array $headers = null)
     {
         $this->headers = $headers;
     }

@@ -13,7 +13,7 @@ class SPointsOrObstacleRecordSet extends AbstractRecordSet
 
     /**
      */
-    public function __construct(array $headers)
+    public function __construct(array $headers = null)
     {
         parent::__construct($headers);
     }
