@@ -135,22 +135,6 @@ class IrapToEcsConverter
         $this->firstDate = null;
         $this->lastDate = null;
         
-        if (null !== $avgHeight) {
-            $this->averageHeight = $avgHeight;
-        }
-        if (null !== $maxDiv) {
-            $this->maxDivergence = $maxDiv;
-        }
-        if (null !== $minLen) {
-            $this->minLength = $minLen;
-        }
-        if (null !== $maxLen) {
-            $this->maxLength = $maxLen;
-        }
-        if (null !== $surveyId) {
-            $this->maxLength = $maxLen;
-        }
-        
         $this->csvhandler = $csvhandler;
     }
     
