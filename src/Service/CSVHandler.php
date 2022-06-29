@@ -85,7 +85,7 @@ class CSVHandler
     private $lastError;
 
 
-     //**************************************************************************************************************
+    //***************************************************************************************************************
     public function __construct( ContainerBagInterface $params )
     //===============================================================================================================
     {
@@ -115,6 +115,7 @@ class CSVHandler
     {        
         $this->filename = $filename;
         $fullFilePath   =  $this->params->get('csv_file_rootpath') . "/" . $this->filename;
+
         try
         {
             if ( ! $this->config->isLoaded()  )
@@ -139,13 +140,12 @@ class CSVHandler
             $file = null;
             return false;
         }
-        
         $file = null;
         return $this->getType();        
     }
     //
     //==============================================================================================================
-    public function loadCSVDataToRecordset( $recordSet )
+    public function loadCSVDataToRecordset( &$recordSet )
     //--------------------------------------------------------------------------------------------------------------
     //
     {
@@ -175,10 +175,10 @@ class CSVHandler
                 switch ($this->csvType)
                 {
                     case CSVHandler::CSVT_IRAP:
-                        $this->addIRAPRecord( $recno, $recordSet, $aRecord );
+                        $this->addIRAPRecord( $recno, &$recordSet, $aRecord );
                         break;
                     case CSVHandler::CSVT_ECS_SURVEYS:
-                        $this->addECSSurveyRecord( $recno, $recordSet, $aRecord );
+                        $this->addECSSurveyRecord( $recno,&$recordSet, $aRecord );
                         break;
                     case CSVHandler::CSVT_ECS_MINORSECTION:
                         $this->addECSSectionRecord( $recno, $recordSet, $aRecord );
@@ -202,14 +202,14 @@ class CSVHandler
     }
     //
     //==============================================================================================================    
-    public function addIRAPRecord( $recno, $recordset, $data )
+    public function addIRAPRecord( $recno, &$recordset, $data )
     //--------------------------------------------------------------------------------------------------------------
     //
     {
         $newRecord = new IRAPRecord($data);
         $newRecord->setId( $recno );
         $newRecord->setVertex( $recno === 1 );
-        $recordset->offsetSet( $recno-1, $newRecord );
+        $recordset[] = $newRecord;
     }
     //
     //==============================================================================================================    
@@ -224,6 +224,9 @@ class CSVHandler
     //--------------------------------------------------------------------------------------------------------------
     //
     {
+        $newRecord = new MinorSectionRecord($data);
+        //$newRecord->setId( $recno );
+        $recordset[] = $newRecord;
     }
     //
     //==============================================================================================================    
@@ -301,7 +304,7 @@ class CSVHandler
     //
     // we accept comma semicolon and tab separators only.
     // 
-    {
+    {  
         $delimiters = array("comma" => ',', "semi" => ';', "tab" => '\t');
         $cntr       = array("comma" =>  substr_count($line, $delimiters["comma"] ),
                             "semi"  =>  substr_count($line, $delimiters["semi"]  ),
@@ -366,8 +369,7 @@ class CSVHandler
         $this->csvType     = array_key_first( $listFileId    );
         $this->csvTemplate = array_key_first( $listTemplates );
         $this->setHeaderInfo( $hdrFields );
-        
-        //  echo "found:" . array_key_first($listFileId) . " - " . array_key_first($listTemplates) . "\n";
+        // echo "found:" . array_key_first($listFileId) . " - " . array_key_first($listTemplates) . "\n";
         return true;
     }
     //==============================================================================================================
@@ -458,13 +460,18 @@ class CSVHandler
             //
             //.......................................................................
             //
-            $records = $recordset->getRecords();
-            foreach ($records as $record )
+            //$records = $recordset->getRecords();            
+            //foreach ( $recordset as $record )
+            $nIndex = -1;
+echo "number of records:" . count($recordset) ;
+            while (++$nIndex < count($recordset) )
             {
-                $line = "";
+                $record  = $recordset[$nIndex];
+                $nField  = 0;
+                $line    = "";
                 foreach ( $header as $fields )
                 {
-                    $line .= ( empty($line) ? "" : $this->delimiter );                                        
+                    $line .= ( ++$nField == 1 ? "" : $this->delimiter );                                        
                     switch ( $fields->getDataType() )
                     {
                         case "date":
@@ -475,7 +482,7 @@ class CSVHandler
                             if ( strpos($value, $this->delimiter ) !== false )
                                 $line .= sprintf( "%c%s%c", '"', $value, '"' );
                             else
-                                $line .= sprintf( "%s", $value,  );
+                                $line .= sprintf( "%s", $value );
                             break;
                         default:
                             $line .= sprintf( $fields->getFormat(), $record->getFieldValue( $fields->getCanonical() ) );
@@ -484,7 +491,7 @@ class CSVHandler
                 }
                 $line .= "\r\n";
                 $file->fwrite( $line );
-                $file->fflush();                       
+                $file->fflush();       
             }
         } 
         catch( \RuntimeException $e )
@@ -502,9 +509,8 @@ class CSVHandler
 
 
 
-
     //==============================================================================================================
-    public function getConfig():CSVConfig 
+    public function getConfig():CSVConfig
     //--------------------------------------------------------------------------------------------------------------
     // return the CSV type
     {

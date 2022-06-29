@@ -10,7 +10,12 @@ use App\Model\AbstractRecord;
  */
 class MinorSectionRecord extends AbstractRecord
 {
+    /**
+     * @var array
+     */
+    private $record;
 
+    
     /**
      */
     public function __construct(array $fields)

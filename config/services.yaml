@@ -4,7 +4,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    csv_header_configuration: '%env(CSV_CONFIGPATH)%/headers.conf'
+    csv_header_configuration: '%kernel.project_dir%/config/headers.conf'
+    #csv_header_configuration: '../config/headers.conf'
     csv_file_rootpath: '%env(CSV_FILEPATH)%'
 
 services:

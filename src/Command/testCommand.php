@@ -11,6 +11,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 use App\Service\CSVHandler;
 USE App\Service\IRAPRecordSet;
+USE App\Converter\ConverterProcess;
+use App\Converter\ConvertProcess;
 
 class testCommand extends Command
 {
@@ -29,7 +31,7 @@ class testCommand extends Command
     
 
     public function __construct(string $name = null, ContainerBagInterface $params, LoggerInterface $logger)
-    {
+    { 
         $this->logger = $logger;
         $this->params = $params;
         parent::__construct($name);
@@ -37,6 +39,20 @@ class testCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $process = new ConvertProcess( $this->params );
+        /*
+        if ( ! $process->doConvert( "iRAP/irap-aggregated-export.csv", array() ) )
+        {
+            echo "ERROR: ".$process->getErrorMessage(). "\n";
+        }
+        */
+        if ( ! $process->doConvert( "ECS/minor_sections.csv", array() ) )
+        {
+            echo "ERROR: ".$process->getErrorMessage(). "\n";
+        }
+        echo "---- end of converting ----\n\n\n";
+
+        /*
         $handler = new CSVHandler( $this->params );
 
         if ( $handler->openCSVfile( "iRAP/irap-aggregated-export.csv" ) )
@@ -46,7 +62,8 @@ class testCommand extends Command
             $handler->saveCSVFile(CSVHandler::CSVT_IRAP, "iRAP/irap-write-test.csv", $IRAPrecords );
 
             //echo "LOADED RECORDS ".count($IRAPrecords)."\n";
-        }        
+        } 
+        */       
         //$handler->loadfile("iRAP/irap-aggregated-export.csv");
         //$handler->loadfile("ECS/minor_sections.csv");               
         //$handler->loadfile("ECS/surveys.csv");

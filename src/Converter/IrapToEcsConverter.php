@@ -19,14 +19,17 @@ use App\Service\MinorSectionRecord;
  */
 class IrapToEcsConverter
 {
+    const DEFA_AVGHEIGHT     = 0;
+    const DEFA_MAXDIVERGENCE = 1.0;
+    const DEFA_MINLENGTH     = 200.0;
+    const DEFA_MAXLENGTH     = 5000.0;
+
+    const NAME_AVGHEIGHT     = "avgheight";
+    const NAME_MAXDIVERGENCE = "maxdivergence";
+    const NAME_MINLENGTH     = "minlength";
+    const NAME_MAXLENGTH     = "maxlength";
     
-    /**
-     * survey id parameter
-     *
-     * @var integer
-     */
-    protected $surveyId;
-    
+
     /**
      * For the LINESTRING z parameter
      * 
@@ -99,10 +102,10 @@ class IrapToEcsConverter
      */
     public function __construct(CSVHandler $csvhandler, $avgHeight = 0, $maxDiv = 1.0, $minLen = 200, $maxLen = 5000, $surveyId = 1)
     {
-        $this->averageHeight = 0;
-        $this->maxDivergence = 1.0;
-        $this->minLength = 200.0;
-        $this->maxLength = 5000.0;
+        $this->averageHeight = IrapToEcsConverter::DEFA_AVGHEIGHT;
+        $this->maxDivergence = IrapToEcsConverter::DEFA_MAXDIVERGENCE;
+        $this->minLength     = IrapToEcsConverter::DEFA_MINLENGTH;
+        $this->maxLength     = IrapToEcsConverter::DEFA_MAXLENGTH;
         $this->surveyId = 1;
         
         $this->firstDate = null;

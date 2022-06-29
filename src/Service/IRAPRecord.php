@@ -40,10 +40,6 @@ class IRAPRecord extends AbstractRecord
      */
     private $geometry;
     
-    /**
-     * @var array
-     */
-    private $record;
     
     /**
      * @var array

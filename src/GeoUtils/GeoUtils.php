@@ -1,6 +1,13 @@
 <?php
 namespace App\GeoUtils;
+/*
+---------------sample values in Europe
+X = longitude      26.00434344
+Y = latitude       43.81530001
 
+LINESTRING Z ( X Y Z, .... )
+
+*/
 
 /**
  *
@@ -32,7 +39,7 @@ class GeoUtils
     {
         $dest = array();
         $latA = deg2rad($latStart); $lonA = deg2rad($lonStart);
-        $latB = deg2rad($latDest); $lonB = deg2rad($lonDest);
+        $latB = deg2rad($latDest);  $lonB = deg2rad($lonDest);
 
         $bearing = $this->bear($latA, $lonA, $latB, $lonB);
         $dist = $this->dist($latA, $lonA, $latB, $lonB);
@@ -40,7 +47,7 @@ class GeoUtils
         $newSplit = $split;
         while ($dist > $newSplit) {
             $point = $this->calcDest($latA, $lonA, $bearing, $newSplit);
-            foreach ($point as $p) {
+            foreach ($point as &$p) {
                 $p = rad2deg($p);
             }
             $dest[] = $point;
