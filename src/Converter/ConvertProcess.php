@@ -215,14 +215,29 @@ class ConvertProcess
     }
     //***************************************************************************************************************
 
+    //===============================================================================================================
+    public function detectFormat( string $fileName ):array
+    //--------------------------------------------------------------------------------------------------------------
+    //
+    {
+        $result = array( "type"=>-1, "template"=>"" );
+        $this->setInputFilePath( $fileName );
+        $inputHandle = new CSVHandler( $this->params );
+        if ( false !== ($this->inputType = $inputHandle->openCSVFile( $this->inputFilePath )) )
+        {
+            $result["type"]     =  $this->inputType;
+            $result["template"] = $inputHandle->getConfig()->getTemplateNameByType( $this->inputType );
+        }
+        return $result;
+    }
+    //***************************************************************************************************************
 
 
     //===============================================================================================================
     public function doConvert( string $fileName, array $userParams ):bool
     //--------------------------------------------------------------------------------------------------------------
     //
-    {
-// echo "---- start convert ----\n";        
+    { 
         $this->clearError();
         $this->setInputFilePath( $fileName );
         $inputHandle = new CSVHandler( $this->params );
