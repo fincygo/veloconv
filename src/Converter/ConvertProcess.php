@@ -268,12 +268,11 @@ class ConvertProcess
                     break;
 
                 case CSVHandler::CSVT_ECS_MINORSECTION:    
-                    $converter = new EcsToIrapConverter( $inputHandle, $this->outputFilePath );
+                    $converter = new EcsToIrapConverter( $inputHandle );
                     if ( $converter->processECSFile() )
                     {
                         $outputPath = pathinfo( $this->inputFilePath, PATHINFO_DIRNAME );
                         $outputFileName = $outputPath . "/" . $inputHandle->getConfig()->getTemplateNameByType( CSVHandler::CSVT_IRAP ) . ConvertProcess::EXT_IRAP;
-                        // echo "output: {$outputFileName}\n";                        
                         if ( $inputHandle->saveCSVFile(CSVHandler::CSVT_IRAP, $outputFileName, $converter->getIRAPSet() ) )
                         {
                             $inputHandle = false;
