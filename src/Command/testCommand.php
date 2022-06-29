@@ -11,8 +11,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 use App\Service\CSVHandler;
 USE App\Service\IRAPRecordSet;
-USE App\Converter\ConverterProcess;
-use App\Converter\ConvertProcess;
+USE App\Converter\ConvertProcess;
+
 
 class testCommand extends Command
 {
