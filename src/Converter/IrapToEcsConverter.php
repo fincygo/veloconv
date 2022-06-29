@@ -142,11 +142,11 @@ class IrapToEcsConverter
     {
         $this->irapSet = [];
         //$this->irapSet->setCsvType(CSVHandler::CSVT_IRAP);
-        /*
+        
         if (!$this->csvhandler->loadCSVDataToRecordset($this->irapSet)) {
             return false;
         }
-        */
+        
         // Generating Columns of the survey_points_crossing_or_obstacle
         $spoheader = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_POINTS);
         $this->spoSet = [];
