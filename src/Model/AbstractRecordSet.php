@@ -81,6 +81,7 @@ abstract class AbstractRecordSet implements \Countable, \ArrayAccess, \IteratorA
     }
     
     /**
+
      * {@inheritDoc}
      * @see \Countable::count()
      */

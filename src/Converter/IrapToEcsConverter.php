@@ -9,6 +9,8 @@ use App\Service\IRAPRecord;
 use App\GeoUtils\GeoUtils;
 use App\Service\SurveyRecordSet;
 use App\Service\MinorSectionRecordSet;
+use App\Service\SurveyRecord;
+use App\Service\MinorSectionRecord;
 
 /**
  *
@@ -87,24 +89,41 @@ class IrapToEcsConverter
     protected $minorSet;
     
     /**
+     * @var \DateTime
      */
-    public function __construct(CSVHandler $csvhandler, $avgHeight = 0, $maxDiv = 1.0, $minLen = 200, $maxLen = 5000)
+    private $firstDate;
+    
+    /**
+     * @var \DateTime
+     */
+    private $lastDate;
+    
+    /**
+     */
+    public function __construct(CSVHandler $csvhandler, $avgHeight = 0, $maxDiv = 1.0, $minLen = 200, $maxLen = 5000, $surveyId = 1)
     {
         $this->averageHeight = IrapToEcsConverter::DEFA_AVGHEIGHT;
         $this->maxDivergence = IrapToEcsConverter::DEFA_MAXDIVERGENCE;
         $this->minLength     = IrapToEcsConverter::DEFA_MINLENGTH;
         $this->maxLength     = IrapToEcsConverter::DEFA_MAXLENGTH;
+        $this->surveyId = 1;
         
-        if ($avgHeight) {
+        $this->firstDate = null;
+        $this->lastDate = null;
+        
+        if (null !== $avgHeight) {
             $this->averageHeight = $avgHeight;
         }
-        if ($maxDiv) {
+        if (null !== $maxDiv) {
             $this->maxDivergence = $maxDiv;
         }
-        if ($minLen) {
+        if (null !== $minLen) {
             $this->minLength = $minLen;
         }
-        if ($maxLen) {
+        if (null !== $maxLen) {
+            $this->maxLength = $maxLen;
+        }
+        if (null !== $surveyId) {
             $this->maxLength = $maxLen;
         }
         
@@ -113,10 +132,7 @@ class IrapToEcsConverter
     
     public function processIrapFile() : bool
     {
-        // TODO: configból fefl kell tölteni
-        $irapheader = array();
-
-        $this->irapSet = new IRAPRecordSet($irapheader);
+        $this->irapSet = new IRAPRecordSet();
         $this->irapSet->setCsvType(CSVHandler::CSVT_IRAP);
         
         if (!$this->csvhandler->loadCSVDataToRecordset($this->irapSet)) {
@@ -133,12 +149,26 @@ class IrapToEcsConverter
         foreach ($this->irapSet as $irap) {
             // Ranking
             $this->calculateRankForRows($irap, $lastRow);
+            // find first date
+            $date = \DateTime::createFromFormat('j.n.Y', $irap->getFieldvalue('road_survey_date'));
+            if (null == $this->firstDate) {
+                $this->firstDate = $date;
+                $this->lastDate = $date;
+            }
+            else {
+                if ($date < $this->firstDate) {
+                    $this->firstDate = $date;
+                }
+                if ($date > $this->lastDate) {
+                    $this->lastDate = $date;
+                }
+            }
             
             if ($irap->getFieldvalue('pedestrian_crossing_inspected_road') != 7 && $irap->getFieldvalue('intersection_type') != 12) {
                 $spo = new SPointsOrObstacleRecord($spoheader);
                 
                 $spo->setFieldvalue('id', $serial);
-                $spo->setFieldvalue('survey_id', 0);
+                $spo->setFieldvalue('survey_id', $this->surveyId);
                 $spo->setFieldvalue('minor_section_id', $irap->getId());
                 $spo->setFieldvalue('kilometre_section', $irap->getFieldvalue('distance'));
                 $spo->setFieldvalue('date', $irap->getFieldvalue('road_survey_date'));
@@ -156,6 +186,11 @@ class IrapToEcsConverter
         
         // ​4.3.1.9.​ Merge Zero Ranked Rows
         $this->mergeZeroRankedRows();
+        
+        // ​4.3.1.10.​ Merge Short Length Rows
+        // and
+        // 4.3.2.4.​ Finalising Data of the survey_points_crossing_or_obstacle
+        $this->mergeShortLengthRows();
         
     }
     
@@ -252,8 +287,7 @@ class IrapToEcsConverter
     
     protected function deleteMarkedRows()
     {
-        $irapheader = array();
-        $irapSet    = new IRAPRecordSet($irapheader);
+        $irapSet = new IRAPRecordSet();
         $irapSet->setCsvType(CSVHandler::CSVT_IRAP);
         $irapSet->setHeaders($this->irapSet->getHeaders());
         /** @var IRAPRecord $irap */
@@ -269,8 +303,14 @@ class IrapToEcsConverter
     }
     
     protected function mergeShortLengthRows() {
+        // cross point
+        $spoCount = count($this->spoSet);
+        $serial = 1;
+        $nSpo = 0;
+        // irap
         $count = count($this->irapSet);
         $n = 0;
+        $distance = 0;
         while ($n < $count-1) {
             /** @var IRAPRecord $cur */
             $cur = $this->irapSet[$n];
@@ -307,21 +347,91 @@ class IrapToEcsConverter
                 $n = $m;
                 ++$m;
             }
+            $n = $m;
+            /** @var SPointsOrObstacleRecord $spo */
+            // lastt merged irap id and before irap ids  belong to the current session
+            $cur->setNewId($serial);
+            // update distance
+            $distance += $cur->getFieldvalue('length');
+            $cur->setFieldvalue('distance', $distance);
+            $spo = $spo = $this->spoSet[$nSpo];
+            if ($n < $count-1) {
+                $next = $this->irapSet[$n];
+                while ($nSpo < $spoCount && $spo->getFieldvalue('minor_section_id') < $next->getId()) {
+                    $spo->setFieldvalue('minor_section_id', $serial);
+                    ++$nSpo;
+                }
+            }
+            ++$serial;
+        }
+        if ($n == $count-1) {
+            $cur = $this->irapSet[$n];
+            $distance += $cur->getFieldvalue('length');
+            $cur->setFieldvalue('distance', $distance);
+        }
+        // last section if it exists
+        while ($nSpo < $spoCount) {
+            $spo->setFieldvalue('minor_section_id', $serial);
+            ++$nSpo;
         }
         // Delete marked rows
         $this->deleteMarkedRows();
     }
 
     protected function generatingValuesOfSurveys() {
-        ;
+        $header = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_SURVEYS);
+        $this->surveySet = new SurveyRecordSet($header);
+        $this->surveySet->setCsvType(CSVHandler::CSVT_ECS_SURVEYS);
+        /** @var IRAPRecord $irap */
+        $irap = $this->irapSet[count($this->irapSet)-1];
+        
+        $record = new SurveyRecord($header);
+        
+        $record->setFieldvalue('id', $this->surveyId);
+        $record->setFieldvalue('start_date', $this->firstDate->format(DATE_ATOM));
+        $record->setFieldvalue('end_date', $this->lastDate->format(DATE_ATOM));
+        $record->setFieldvalue('by', $irap->getFieldvalue('coder_name'));
+        $record->setFieldvalue('device', 'unknow');
+        $record->setFieldvalue('app_version', '0.0');
+        $record->setFieldvalue('length', $irap->getFieldvalue('distance'));
+        $record->setFieldvalue('minor_section_count', count($this->irapSet));
+        $record->setFieldvalue('point_count', count($this->spoSet));
+        $record->setFieldvalue('daily_section_id', '1');
     }
     
     protected function generatingValuesOfMinorSection() {
-        ;
+        $header = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_MINORSECTION);
+        $this->minorSet = new MinorSectionRecordSet($header);
+        $this->minorSet->setCsvType(CSVHandler::CSVT_ECS_MINORSECTION);
+        /** @var IRAPRecord $irap */
+        $irap = $this->irapSet[count($this->irapSet)-1];
+        
+        $rec = new MinorSectionRecord($header);
+        /** @var IRAPRecord $irap */
+        foreach ($this->irapSet as $irap) {
+            $rec->setFieldvalue('id', $irap->getId());
+            $rec->setFieldvalue('survey_id', $this->surveyId);
+            $rec->setFieldvalue('index', $irap->getId());
+            $date = \DateTime::createFromFormat('j.n.Y', $irap->getFieldvalue('road_survey_date'));
+            $rec->setFieldvalue('date', $date->format(DATE_ATOM));
+            $rec->setFieldvalue('length', $irap->getFieldvalue('length'));
+            $rec->setFieldvalue('i1_legal', $value);
+        }
     }
     
-    protected function finaliseSpoRecords() {
-        ;
+    protected function getL1legalValue(IRAPRecord $irap): string
+    {
+        
+    }
+    
+    protected function makeWKTLinestring(array $points): string
+    {
+        $coord = [];
+        foreach ($points as $p); {
+            $coord[] = implode(' ', $p); 
+        }
+        return 'LINESTRING Z (' . implode(', ', $coord) . ')"';
+        
     }
     
     /**
