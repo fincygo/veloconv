@@ -1,17 +1,13 @@
 <?php
 namespace App\Converter;
 
-use App\Service\CSVHandler;
-use App\Service\SPointsOrObstacleRecordSet;
-use App\Service\IRAPRecordSet;
-use App\Service\SPointsOrObstacleRecord;
-use App\Service\IRAPRecord;
 use App\GeoUtils\GeoUtils;
-use App\Service\SurveyRecordSet;
-use App\Service\MinorSectionRecordSet;
-use App\Service\SurveyRecord;
+use App\Service\CSVHandler;
+use App\Service\IRAPRecord;
 use App\Service\MinorSectionRecord;
-use Symfony\Flex\Unpack\Result;
+use App\Service\SPointsOrObstacleRecord;
+use App\Service\SurveyRecord;
+use Psr\Log\LoggerInterface;
 
 /**
  *
@@ -53,7 +49,12 @@ class IrapToEcsConverter
         43 => '80mph',
         45 => '>=90mph',
         ];
-
+    
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
+    
     /**
      * For the LINESTRING z parameter
      * 
@@ -124,7 +125,7 @@ class IrapToEcsConverter
     
     /**
      */
-    public function __construct(CSVHandler $csvhandler)
+    public function __construct(CSVHandler $csvhandler, LoggerInterface $logger)
     {
         $this->averageHeight = IrapToEcsConverter::DEFA_AVGHEIGHT;
         $this->maxDivergence = IrapToEcsConverter::DEFA_MAXDIVERGENCE;
@@ -132,24 +133,26 @@ class IrapToEcsConverter
         $this->maxLength     = IrapToEcsConverter::DEFA_MAXLENGTH;
         $this->surveyId = 1;
         
-        $this->firstDate = null;
-        $this->lastDate = null;
+        $this->firstDate    = null;
+        $this->lastDate     = null;
         
-        $this->csvhandler = $csvhandler;
+        $this->csvhandler   = $csvhandler;
+        $this->logger       = $logger;
+        
+        $this->irapSet      = array();
+        $this->surveySet    = array();
+        $this->minorSet     = array();
+        $this->spoSet       = array();
     }
     
     public function processIrapFile() : bool
     {
-        $this->irapSet = [];
-        //$this->irapSet->setCsvType(CSVHandler::CSVT_IRAP);
-        
         if (!$this->csvhandler->loadCSVDataToRecordset($this->irapSet)) {
             return false;
         }
         
         // Generating Columns of the survey_points_crossing_or_obstacle
         $spoheader = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_POINTS);
-        $this->spoSet = [];
         //$this->spoSet->setCsvType(CSVHandler::CSVT_ECS_POINTS);
         /** @var \App\Service\IRAPRecord $irap */
         $lastRow = array();
@@ -157,6 +160,7 @@ class IrapToEcsConverter
         foreach ($this->irapSet as $irap) {
             // Ranking
             $this->calculateRankForRows($irap, $lastRow);
+            $this->logger->warning('ID: {id}; Rank: {rank}', ["id"=>$irap->getId(), "rank"=>$irap->getRank()]);
             // find first date
             $date = \DateTime::createFromFormat('j.n.Y', $irap->getFieldvalue('road_survey_date'));
             if (null == $this->firstDate) {
@@ -172,7 +176,10 @@ class IrapToEcsConverter
                 }
             }
             
-            if ($irap->getFieldvalue('pedestrian_crossing_inspected_road') != 7 && $irap->getFieldvalue('intersection_type') != 12) {
+            $this->logger->warning('ID: {id}; PCIR: {pcir}', ["id"=>$irap->getId(), "pcir"=>$irap->getFieldvalue('pedestrian_crossing_inspected_road')]);
+            $this->logger->critical('PCIR != 7 = {b1} && ISECT != 12 = {b2}', ["b1"=>($irap->getFieldvalue('pedestrian_crossing_inspected_road') != 7)?'true':'false', "b2"=>($irap->getFieldvalue('intersection_type') != 12)?'true':'false']);
+            if ($irap->getFieldvalue('pedestrian_crossing_inspected_road') != 7 || $irap->getFieldvalue('intersection_type') != 12) {
+                $this->logger->warning('ID: {id}; Added to Cross Points', ["id"=>$irap->getId()]);
                 $spo = new SPointsOrObstacleRecord($spoheader);
                 
                 $spo->setFieldvalue('id', $serial);
@@ -270,7 +277,10 @@ class IrapToEcsConverter
                     $this->irapSet[$m+1]->getFieldvalue('latitude'), $this->irapSet[$m+1]->getFieldvalue('longitude'),
                     $this->irapSet[$m]->getFieldvalue('latitude'), $this->irapSet[$m]->getFieldvalue('longitude')
                 );
+                $this->logger->warning('Detect vertices: ID: {id}; Next: {m},; Dist: {dist}', ["id"=>$this->irapSet[$n]->getId(), "m"=>$this->irapSet[$m]->getId(), "dist"=>$dist]);
+                $this->logger->critical('Dist > Div = {b}', ["b"=>($dist > $div)?'true':'false']);
                 if ($dist > $div) {
+                    $this->logger->warning('ADD vertices: ID: {id};', ["id"=>$this->irapSet[$m]->getId()]);
                     $this->irapSet[$m]->setVertex(true);
                     break;
                 }
@@ -311,7 +321,7 @@ class IrapToEcsConverter
     
     protected function deleteMarkedRows()
     {
-        $irapSet = [];
+        $irapSet = array();
         //$irapSet->setCsvType(CSVHandler::CSVT_IRAP);
         //$irapSet->setHeaders($this->irapSet->getHeaders());
         /** @var IRAPRecord $irap */
@@ -384,6 +394,7 @@ class IrapToEcsConverter
                 while ($nSpo < $spoCount && $spo->getFieldvalue('minor_section_id') < $next->getId()) {
                     $spo->setFieldvalue('minor_section_id', $serial);
                     ++$nSpo;
+                    $spo = $this->spoSet[$nSpo];
                 }
             }
             ++$serial;
@@ -395,7 +406,7 @@ class IrapToEcsConverter
         }
         // last section if it exists
         while ($nSpo < $spoCount) {
-            $spo->setFieldvalue('minor_section_id', $serial);
+            $this->spoSet[$nSpo]->setFieldvalue('minor_section_id', $serial);
             ++$nSpo;
         }
         // Delete marked rows
@@ -404,8 +415,6 @@ class IrapToEcsConverter
 
     protected function generatingValuesOfSurveys() {
         $header = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_SURVEYS);
-        $this->surveySet = [];
-        //$this->surveySet->setCsvType(CSVHandler::CSVT_ECS_SURVEYS);
         /** @var IRAPRecord $irap */
         $irap = $this->irapSet[count($this->irapSet)-1];
         
@@ -427,10 +436,6 @@ class IrapToEcsConverter
     
     protected function generatingValuesOfMinorSection() {
         $header = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_MINORSECTION);
-        $this->minorSet = [];
-        //$this->minorSet->setCsvType(CSVHandler::CSVT_ECS_MINORSECTION);
-        /** @var IRAPRecord $irap */
-        $irap = $this->irapSet[count($this->irapSet)-1];
         
         /** @var IRAPRecord $irap */
         foreach ($this->irapSet as $irap) {

@@ -3,6 +3,7 @@ namespace App\Converter;
 
 use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use App\Service\CSVHandler;
+use Psr\Log\LoggerInterface;
 
 /**
  *
@@ -20,7 +21,17 @@ class ConvertProcess
     const ERRCP_ECS_PROCESS  = array( "code" => -4, "message" => "Error in iRAP to ECS conversion." );
     const ERRCP_ECS_OUTPUT   = array( "code" => -5, "message" => "Converted ECS file can`t create." );    
     const ERRCP_IRAPS_OUTPUT = array( "code" => -6, "message" => "Converted IRAP file can`t create." );        
-
+    
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
+    
+    /**
+     * @var ContainerBagInterface
+     */
+    protected $params;
+    
     /**
      * For the LINESTRING z parameter
      *
@@ -206,10 +217,11 @@ class ConvertProcess
 
 
     //***************************************************************************************************************
-    public function __construct( ContainerBagInterface $params )
+    public function __construct( ContainerBagInterface $params, LoggerInterface $logger )
     //===============================================================================================================
     {
         $this->params        = $params;
+        $this->logger        = $logger;
         $this->procError     = array();
       
     }
@@ -247,7 +259,7 @@ class ConvertProcess
             {
                 case CSVHandler::CSVT_IRAP:   
                                  
-                    $converter = new IrapToEcsConverter( $inputHandle, $this->outputFilePath );
+                    $converter = new IrapToEcsConverter( $inputHandle, $this->logger );
 
                     if ( is_array($userParams) && array_key_exists( IrapToEcsConverter::NAME_AVGHEIGHT, $userParams ) )
                         $converter->setAverageHeight( $userParams[ IrapToEcsConverter::NAME_AVGHEIGHT] );

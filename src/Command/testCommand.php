@@ -39,15 +39,17 @@ class testCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $process = new ConvertProcess( $this->params );
+        $process = new ConvertProcess( $this->params, $this->logger );
         /*
         if ( ! $process->doConvert( "iRAP/irap-aggregated-export.csv", array() ) )
         {
             echo "ERROR: ".$process->getErrorMessage(). "\n";
         }
         */
-        if ( ! $process->doConvert( "ECS/minor_sections.csv", array() ) )
+        $this->logger->warning('Start conversion');
+        if ( ! $process->doConvert( "irap-aggregated-export.csv", array() ) )
         {
+            $this->logger->warning('ERR conversion');
             // echo "ERROR: ".$process->getErrorMessage(). "\n";
         }
         //echo "---- end of converting ----\n\n\n";
