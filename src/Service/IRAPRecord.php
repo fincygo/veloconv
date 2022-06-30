@@ -134,7 +134,10 @@ class IRAPRecord extends AbstractRecord
      */
     public function addLatlongPoint($longitude, $latitude, $z)
     {
-        $point = [$longitude, $latitude, $z];
+        $point = array();
+        $point[] = $longitude;
+        $point[] = $latitude;
+        $point[] = $z;
         $this->latlong[] = $point;
     }
     

@@ -46,10 +46,10 @@ class testCommand extends Command
             echo "ERROR: ".$process->getErrorMessage(). "\n";
         }
         */
-        $this->logger->warning('Start conversion');
+        //$this->logger->warning('Start conversion');
         if ( ! $process->doConvert( "irap-aggregated-export.csv", array() ) )
         {
-            $this->logger->warning('ERR conversion');
+            //$this->logger->warning('ERR conversion');
             // echo "ERROR: ".$process->getErrorMessage(). "\n";
         }
         //echo "---- end of converting ----\n\n\n";

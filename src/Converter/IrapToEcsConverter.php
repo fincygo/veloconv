@@ -56,6 +56,11 @@ class IrapToEcsConverter
     protected $logger;
     
     /**
+     * @var integer
+     */
+    protected $surveyId;
+    
+    /**
      * For the LINESTRING z parameter
      * 
      * @var string
@@ -127,11 +132,11 @@ class IrapToEcsConverter
      */
     public function __construct(CSVHandler $csvhandler, LoggerInterface $logger)
     {
-        $this->averageHeight = IrapToEcsConverter::DEFA_AVGHEIGHT;
-        $this->maxDivergence = IrapToEcsConverter::DEFA_MAXDIVERGENCE;
-        $this->minLength     = IrapToEcsConverter::DEFA_MINLENGTH;
-        $this->maxLength     = IrapToEcsConverter::DEFA_MAXLENGTH;
-        $this->surveyId = 1;
+        $this->averageHeight    = IrapToEcsConverter::DEFA_AVGHEIGHT;
+        $this->maxDivergence    = IrapToEcsConverter::DEFA_MAXDIVERGENCE;
+        $this->minLength        = IrapToEcsConverter::DEFA_MINLENGTH;
+        $this->maxLength        = IrapToEcsConverter::DEFA_MAXLENGTH;
+        $this->surveyId         = 1;
         
         $this->firstDate    = null;
         $this->lastDate     = null;
@@ -160,7 +165,6 @@ class IrapToEcsConverter
         foreach ($this->irapSet as $irap) {
             // Ranking
             $this->calculateRankForRows($irap, $lastRow);
-            $this->logger->warning('ID: {id}; Rank: {rank}', ["id"=>$irap->getId(), "rank"=>$irap->getRank()]);
             // find first date
             $date = \DateTime::createFromFormat('j.n.Y', $irap->getFieldvalue('road_survey_date'));
             if (null == $this->firstDate) {
@@ -176,10 +180,7 @@ class IrapToEcsConverter
                 }
             }
             
-            $this->logger->warning('ID: {id}; PCIR: {pcir}', ["id"=>$irap->getId(), "pcir"=>$irap->getFieldvalue('pedestrian_crossing_inspected_road')]);
-            $this->logger->critical('PCIR != 7 = {b1} && ISECT != 12 = {b2}', ["b1"=>($irap->getFieldvalue('pedestrian_crossing_inspected_road') != 7)?'true':'false', "b2"=>($irap->getFieldvalue('intersection_type') != 12)?'true':'false']);
             if ($irap->getFieldvalue('pedestrian_crossing_inspected_road') != 7 || $irap->getFieldvalue('intersection_type') != 12) {
-                $this->logger->warning('ID: {id}; Added to Cross Points', ["id"=>$irap->getId()]);
                 $spo = new SPointsOrObstacleRecord($spoheader);
                 
                 $spo->setFieldvalue('id', $serial);
@@ -228,32 +229,33 @@ class IrapToEcsConverter
         } else {
             $rank = 0;
             if ($lastRow['speed_limit'] != $irap->getFieldvalue('speed_limit')) {
+                $lastRow['speed_limit'] = $irap->getFieldvalue('speed_limit');
                 ++$rank;
             }
-            $lastRow['speed_limit'] = $irap->getFieldvalue('speed_limit');
             
             if ($lastRow['bicycle_facility'] != $irap->getFieldvalue('bicycle_facility')) {
+                $lastRow['bicycle_facility'] = $irap->getFieldvalue('bicycle_facility');
                 ++$rank;
             }
-            $lastRow['bicycle_facility'] = $irap->getFieldvalue('bicycle_facility');
             
             if ($lastRow['number_of_lanes'] != $irap->getFieldvalue('number_of_lanes')) {
+                $lastRow['number_of_lanes'] = $irap->getFieldvalue('number_of_lanes');
                 ++$rank;
             }
             if ($lastRow['lane_width'] != $irap->getFieldvalue('lane_width')) {
+                $lastRow['lane_width'] = $irap->getFieldvalue('lane_width');
                 ++$rank;
             }
-            $lastRow['lane_width'] = $irap->getFieldvalue('lane_width');
             
             if ($lastRow['road_condition'] != $irap->getFieldvalue('road_condition')) {
+                $lastRow['road_condition'] = $irap->getFieldvalue('road_condition');
                 ++$rank;
             }
-            $lastRow['road_condition'] = $irap->getFieldvalue('road_condition');
             
             if ($lastRow['skid_resistance_grip'] != $irap->getFieldvalue('skid_resistance_grip')) {
+                $lastRow['skid_resistance_grip'] = $irap->getFieldvalue('skid_resistance_grip');
                 ++$rank;
             }
-            $lastRow['skid_resistance_grip'] = $irap->getFieldvalue('skid_resistance_grip');
             
             $irap->setRank($rank);
         }
@@ -277,10 +279,7 @@ class IrapToEcsConverter
                     $this->irapSet[$m+1]->getFieldvalue('latitude'), $this->irapSet[$m+1]->getFieldvalue('longitude'),
                     $this->irapSet[$m]->getFieldvalue('latitude'), $this->irapSet[$m]->getFieldvalue('longitude')
                 );
-                $this->logger->warning('Detect vertices: ID: {id}; Next: {m},; Dist: {dist}', ["id"=>$this->irapSet[$n]->getId(), "m"=>$this->irapSet[$m]->getId(), "dist"=>$dist]);
-                $this->logger->critical('Dist > Div = {b}', ["b"=>($dist > $div)?'true':'false']);
                 if ($dist > $div) {
-                    $this->logger->warning('ADD vertices: ID: {id};', ["id"=>$this->irapSet[$m]->getId()]);
                     $this->irapSet[$m]->setVertex(true);
                     break;
                 }
@@ -301,7 +300,7 @@ class IrapToEcsConverter
             $m = $n+1;
             $next = $this->irapSet[$m];
             // Calculate lenghts in meter unit
-            while ($m < $count-1 && $next->getRank() == 0 && (($cur->getFieldvalue('length')+$next->getFieldvalue('length')) * 1000) < ($this->maxLength-$this->minLength)) {
+            while ($m < $count-1 && $next->getRank() == 0 && (($cur->getFieldvalue('length')+$next->getFieldvalue('length')) * 1000) < ($this->maxLength - $this->minLength)) {
                 $cur->setFieldvalue('length', $cur->getFieldvalue('length')+$next->getFieldvalue('length'));
                 if ($next->isVertex()) {
                     $cur->addLatlongPoint($next->getFieldvalue('longitude'), $next->getFieldvalue('latitude'), $this->averageHeight);
@@ -313,8 +312,8 @@ class IrapToEcsConverter
             $cur->addLatlongPoint($next->getFieldvalue('longitude'), $next->getFieldvalue('latitude'), $this->averageHeight);
             $n = $m;
         }
-        $next = $this->irapSet[$count-1]; $next->setDeleted(true);
         $cur->addLatlongPoint($next->getFieldvalue('longitude'), $next->getFieldvalue('latitude'), $this->averageHeight);
+        $next = $this->irapSet[$count-1]; $next->setDeleted(true);
         // Delete marked rows
         $this->deleteMarkedRows();
     }
@@ -322,8 +321,6 @@ class IrapToEcsConverter
     protected function deleteMarkedRows()
     {
         $irapSet = array();
-        //$irapSet->setCsvType(CSVHandler::CSVT_IRAP);
-        //$irapSet->setHeaders($this->irapSet->getHeaders());
         /** @var IRAPRecord $irap */
         foreach ($this->irapSet as &$irap) {
             if ($irap->isDeleted()) {
@@ -349,7 +346,7 @@ class IrapToEcsConverter
             /** @var IRAPRecord $cur */
             $cur = $this->irapSet[$n];
             $m = $n+1;
-            while ($m < $count && $cur->getFieldvalue('length') < $this->minLength) {
+            while ($m < $count && ($cur->getFieldvalue('length') * 1000) < $this->minLength) {
                 /** @var IRAPRecord $next */
                 $next = $this->irapSet[$m];
                 $bMethod = 0;
@@ -419,7 +416,6 @@ class IrapToEcsConverter
         $irap = $this->irapSet[count($this->irapSet)-1];
         
         $record = new SurveyRecord($header);
-        
         $record->setFieldvalue('id', $this->surveyId);
         $record->setFieldvalue('start_date', $this->firstDate->format(DATE_ATOM));
         $record->setFieldvalue('end_date', $this->lastDate->format(DATE_ATOM));
@@ -441,9 +437,9 @@ class IrapToEcsConverter
         foreach ($this->irapSet as $irap) {
             $rec = new MinorSectionRecord($header);
             
-            $rec->setFieldvalue('id', $irap->getId());
+            $rec->setFieldvalue('id', $irap->getNewId());
             $rec->setFieldvalue('survey_id', $this->surveyId);
-            $rec->setFieldvalue('index', $irap->getId());
+            $rec->setFieldvalue('index', $irap->getNewId());
             $date = \DateTime::createFromFormat('j.n.Y', $irap->getFieldvalue('road_survey_date'));
             $rec->setFieldvalue('date', $date->format(DATE_ATOM));
             $rec->setFieldvalue('length', $irap->getFieldvalue('length'));
@@ -465,12 +461,7 @@ class IrapToEcsConverter
     
     protected function createMinorComment(IRAPRecord $irap): string
     {
-        $values = [];
-        $values[] = $irap->getFieldvalue('image_reference ');
-        $values[] = $irap->getFieldvalue('road_name ');
-        $values[] = $irap->getFieldvalue('section ');
-        
-        return implode(';', $values);
+        return sprintf("%s;%s;%s", $irap->getFieldvalue('image_reference'), $irap->getFieldvalue('road_name'), $irap->getFieldvalue('section'));
     }
     
     protected function getI2TrafficCategory(IRAPRecord $irap): string
@@ -572,9 +563,9 @@ class IrapToEcsConverter
     
     protected function makeWKTLinestring(array $points): string
     {
-        $coord = [];
-        foreach ($points as $p); {
-            $coord[] = implode(' ', $p); 
+        $coord = array();
+        foreach ($points as $p) {
+            $coord[] = implode(' ', $p);
         }
         return 'LINESTRING Z (' . implode(', ', $coord) . ')"';
         

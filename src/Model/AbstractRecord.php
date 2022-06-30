@@ -35,7 +35,6 @@ abstract class AbstractRecord
             $value = $this->fields[ $name ];
         }
         // TODO: else throw log error
-        
         return $value;
     }
     
@@ -48,6 +47,11 @@ abstract class AbstractRecord
         // TODO: throw log error
         
         return $this;
+    }
+    
+    public function getFields(): array
+    {
+        return $this->fields;
     }
 }
 
