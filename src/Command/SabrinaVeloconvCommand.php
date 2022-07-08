@@ -46,7 +46,7 @@ class SabrinaVeloconvCommand extends Command
         $this
             ->addArgument('file', InputArgument::REQUIRED, 'IRAP csv file or ECS minor_sections csv file with path.')
             ->addOption('min', 'm', InputOption::VALUE_REQUIRED, 'Minimum length of ECS segments in metres, default value m=200.')
-            ->addOption('max', 'x', InputOption::VALUE_REQUIRED, 'Maximum length of ECS segments in metres, default value x=200.')
+            ->addOption('max', 'x', InputOption::VALUE_REQUIRED, 'Maximum length of ECS segments in metres, default value x=5000.')
             ->addOption('dir', 'd', InputOption::VALUE_REQUIRED, 'Value is i2e or e2i, Defines the direction of the conversion')
             ->addOption('height', 'z', InputOption::VALUE_REQUIRED, 'Average height to be used as “z” in linestring during conversion to ECS.')
             ->addOption('pgen', 'p', InputOption::VALUE_REQUIRED, 'Parameter for generalisation of route lines, p means the maximum divergence from the original polygone. Default value is 1 metre, if p=0 then no generalisation, all segments will be converted to the polyline.')
@@ -70,32 +70,33 @@ class SabrinaVeloconvCommand extends Command
         // This option parameter unused yet
         $dir = $input->getOption('dir');
         
-        $params = array();
+        $options = array();
         if (null !== $min) {
-            $params[IrapToEcsConverter::NAME_MINLENGTH] = $min;
+            $options[IrapToEcsConverter::NAME_MINLENGTH] = $min;
         }
         if (null !== $max) {
-            $params[IrapToEcsConverter::NAME_MAXLENGTH] = $max;
+            $options[IrapToEcsConverter::NAME_MAXLENGTH] = $max;
         }
         if (null !== $height) {
-            $params[IrapToEcsConverter::NAME_AVGHEIGHT] = $height;
+            $options[IrapToEcsConverter::NAME_AVGHEIGHT] = $height;
         }
         if (null !== $pgen) {
-            $params[IrapToEcsConverter::NAME_MAXDIVERGENCE] = $pgen;
+            $options[IrapToEcsConverter::NAME_MAXDIVERGENCE] = $pgen;
         }
         if (null !== $slen) {
-            $params[EcsToIrapConverter::NAME_SEGMENTLENGTH] = $slen;
+            $options[EcsToIrapConverter::NAME_SEGMENTLENGTH] = $slen;
         }
         if (null !== $id) {
-            $params[IrapToEcsConverter::NAME_SURVEYID] = $id;
+            $options[IrapToEcsConverter::NAME_SURVEYID] = $id;
         }
         
         $process = new ConvertProcess( $this->params, $this->logger );
         
-        if ( ! $process->doConvert( $file, $params ) )
+        if ( ! $process->doConvert( $file, $options ) )
         {
             $io->error("ERROR: " . $process->getErrorMessage());
-            return Command::FAILURE;        }
+            return Command::FAILURE;
+        }
 
         $io->success('The conversion is successfully ended.');
 
