@@ -20,11 +20,13 @@ class IrapToEcsConverter
     const DEFA_MAXDIVERGENCE = 1.0;
     const DEFA_MINLENGTH     = 200.0;
     const DEFA_MAXLENGTH     = 5000.0;
-
+    const DEFA_SURVEYID      = 1;
+    
     const NAME_AVGHEIGHT     = "avgheight";
     const NAME_MAXDIVERGENCE = "maxdivergence";
     const NAME_MINLENGTH     = "minlength";
     const NAME_MAXLENGTH     = "maxlength";
+    const NAME_SURVEYID     = "surveyid";
     
     const SPEED_LIMIT = [
         1 => '<30km/h',
@@ -56,6 +58,8 @@ class IrapToEcsConverter
     protected $logger;
     
     /**
+     * For the survey.csv id field
+     * 
      * @var integer
      */
     protected $surveyId;
@@ -132,11 +136,11 @@ class IrapToEcsConverter
      */
     public function __construct(CSVHandler $csvhandler, LoggerInterface $logger)
     {
-        $this->averageHeight    = IrapToEcsConverter::DEFA_AVGHEIGHT;
-        $this->maxDivergence    = IrapToEcsConverter::DEFA_MAXDIVERGENCE;
-        $this->minLength        = IrapToEcsConverter::DEFA_MINLENGTH;
-        $this->maxLength        = IrapToEcsConverter::DEFA_MAXLENGTH;
-        $this->surveyId         = 1;
+        $this->averageHeight    = self::DEFA_AVGHEIGHT;
+        $this->maxDivergence    = self::DEFA_MAXDIVERGENCE;
+        $this->minLength        = self::DEFA_MINLENGTH;
+        $this->maxLength        = self::DEFA_MAXLENGTH;
+        $this->surveyId         = self::DEFA_SURVEYID;
         
         $this->firstDate    = null;
         $this->lastDate     = null;
@@ -158,7 +162,6 @@ class IrapToEcsConverter
         
         // Generating Columns of the survey_points_crossing_or_obstacle
         $spoheader = $this->csvhandler->getConfig()->getCSVFieldArrayByType(CSVHandler::CSVT_ECS_POINTS);
-        //$this->spoSet->setCsvType(CSVHandler::CSVT_ECS_POINTS);
         /** @var \App\Service\IRAPRecord $irap */
         $lastRow = array();
         $serial = 1;
@@ -658,7 +661,23 @@ class IrapToEcsConverter
     {
         return $this->minorSet;
     }
+    
+    /**
+     * @return number
+     */
+    public function getSurveyId()
+    {
+        return $this->surveyId;
+    }
+
+    /**
+     * @param number $surveyId
+     */
+    public function setSurveyId($surveyId)
+    {
+        $this->surveyId = $surveyId;
+    }
+
 
     
 }
-

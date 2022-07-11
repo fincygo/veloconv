@@ -263,6 +263,8 @@ class ConvertProcess
                                  
                     $converter = new IrapToEcsConverter( $inputHandle, $this->logger );
 
+                    if ( is_array($userParams) && array_key_exists( IrapToEcsConverter::NAME_SURVEYID, $userParams ) )
+                        $converter->setSurveyId( $userParams[ IrapToEcsConverter::NAME_SURVEYID] );
                     if ( is_array($userParams) && array_key_exists( IrapToEcsConverter::NAME_AVGHEIGHT, $userParams ) )
                         $converter->setAverageHeight( $userParams[ IrapToEcsConverter::NAME_AVGHEIGHT] );
                     if ( is_array($userParams) && array_key_exists( IrapToEcsConverter::NAME_MAXDIVERGENCE, $userParams ) )
@@ -298,6 +300,9 @@ class ConvertProcess
 
                 case CSVHandler::CSVT_ECS_MINORSECTION:    
                     $converter = new EcsToIrapConverter( $inputHandle );
+                    if ( is_array($userParams) && array_key_exists( EcsToIrapConverter::NAME_SEGMENTLENGTH, $userParams ) )
+                        $converter->setSegmentLength( $userParams[EcsToIrapConverter::NAME_SEGMENTLENGTH] );
+                    
                     if ( $converter->processECSFile() )
                     {
                         $outputPath = pathinfo( $this->inputFilePath, PATHINFO_DIRNAME );
