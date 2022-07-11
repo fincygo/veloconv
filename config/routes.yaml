@@ -4,3 +4,4 @@
 veloconv:
     path: /veloconv
     controller: App\Controller\VeloconvController::veloconv
+    methods: POST

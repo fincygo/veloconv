@@ -1,15 +1,14 @@
 <?php
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
-use Psr\Log\LoggerInterface;
-use App\Converter\IrapToEcsConverter;
-use App\Converter\EcsToIrapConverter;
 use App\Converter\ConvertProcess;
+use App\Converter\EcsToIrapConverter;
+use App\Converter\IrapToEcsConverter;
+use Psr\Log\LoggerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  *
@@ -18,9 +17,7 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class VeloconvController extends AbstractController
 {
-    /**
-     * @Route("/veloconv", name="veloconv", methods={"POST","GET"})
-     */
+
     public function veloconv(Request $request, ContainerBagInterface $params, LoggerInterface $logger) {
         $payload = $request->getContent();
         $dataObj = json_decode($payload);
