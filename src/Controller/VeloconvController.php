@@ -19,7 +19,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class VeloconvController extends AbstractController
 {
     /**
-     * @Route("/veloconv", name="veloconv", methods={"POST"})
+     * @Route("/veloconv", name="veloconv", methods={"POST","GET"})
      */
     public function veloconv(Request $request, ContainerBagInterface $params, LoggerInterface $logger) {
         $payload = $request->getContent();
