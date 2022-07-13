@@ -17,8 +17,9 @@ LINESTRING Z ( X Y Z, .... )
 class GeoUtils
 {
     // Earth's radius in meters
-    const GEO_R = 6378137 ;
-
+    const GEO_R = 6378137;
+    //const GEO_R = 6371000;
+    
     /**
      */
     public function __construct()
@@ -42,7 +43,7 @@ class GeoUtils
         $latB = deg2rad($latDest);  $lonB = deg2rad($lonDest);
 
         $bearing = $this->bear($latA, $lonA, $latB, $lonB);
-        $dist    = $this->dist($latA, $lonA, $latB, $lonB);
+        $dist    = $this->distH($latStart, $lonStart, $latDest, $lonDest);
         
         $newSplit = $split;
         while ($dist > $newSplit) 
@@ -76,7 +77,7 @@ class GeoUtils
         $dest = array();
         $angDist = $distance / self::GEO_R;
         $dest['lat'] = $dest[0] = asin( sin($latA) * cos($angDist) + cos($latA) * sin($angDist) * $bearing );
-        $dest['lon'] = $dest[1] = $lonA + atan2( sin($bearing) * sin($angDist) * cos($latA), cos($angDist) - sin($latA) * sin($dest[0]) );
+        $dest['lon'] = $dest[1] = $lonA + atan2( sin($bearing) * sin($angDist) * cos($latA), cos($angDist) - sin($latA) * sin($dest['lat']) );
         
         return $dest;
     }
@@ -130,6 +131,26 @@ class GeoUtils
         return $result;
     } 
     
+    /**
+     * DISTH Finds the distance between two lat/lon points uses the ‘haversine’ formula.
+     * All parameters in degrees
+     * @param float $latA
+     * @param float $lonA
+     * @param float $latB
+     * @param float $lonB
+     * @return float
+     */
+    public function distH(float $latA, float $lonA, float $latB, float $lonB) : float
+    {
+        $lat1 = deg2rad($latA);
+        $lat2 = deg2rad($latB);
+        $dlat = deg2rad($latB-$latA);
+        $dlon = deg2rad($lonB-$lonA);
+        $a = sin($dlat/2) * sin($dlat/2) + cos($lat1) * cos($lat2) * sin($dlon/2) * sin($dlon/2);
+        $c = atan2(sqrt($a), sqrt(1-$a)) * 2;
+
+        return $c * self::GEO_R;
+    }
     
     /**
      * DIST Finds the distance between two lat/lon points.
