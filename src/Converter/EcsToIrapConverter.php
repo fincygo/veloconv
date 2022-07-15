@@ -120,9 +120,13 @@ class EcsToIrapConverter
                 {
                     // $splitLength = floor( $length / ceil( $length / $this->segmentLength )) / 2;
                     // echo "Need to interpolate {$length}  {$this->segmentLength}\n";
-                    $newPoints = $this->GeoUtils->splitArc( floatval( $prevRecord->getFieldValue("latitude")), floatval( $prevRecord->getFieldValue("longitude")),
-                                                            floatval( $TempRecord->getFieldValue("latitude")), floatval( $TempRecord->getFieldValue("longitude")),
-                                                            $this->segmentLength );
+                    //$newPoints = $this->GeoUtils->splitArc( floatval( $prevRecord->getFieldValue("latitude")), floatval( $prevRecord->getFieldValue("longitude")),
+                    //                                        floatval( $TempRecord->getFieldValue("latitude")), floatval( $TempRecord->getFieldValue("longitude")),
+                    //                                        $this->segmentLength );
+                    // teszt new split method
+                    $newPoints = $this->GeoUtils->getIntermediatePoints( floatval( $prevRecord->getFieldValue("latitude")), floatval( $prevRecord->getFieldValue("longitude")),
+                                                                        floatval( $TempRecord->getFieldValue("latitude")), floatval( $TempRecord->getFieldValue("longitude")),
+                                                                        $this->segmentLength );
 
                     foreach ($newPoints as $newPoint )
                     {
@@ -141,7 +145,10 @@ class EcsToIrapConverter
                         $IRAPRecord->setFieldvalue("comments", "Interpolated from an ECS microsections file" );
                         $this->IRAPSet[] = $IRAPRecord;
                     }
-                         
+                    // PL.: a kezdő pontok lemaradnak
+                    ++$this->IRAPSerial;
+                    $TempRecord->setId( $this->IRAPSerial );
+                    $this->IRAPSet[] = $TempRecord;
                 }
                 else
                 {
@@ -268,8 +275,10 @@ class EcsToIrapConverter
 
     protected function calculateLength( $prevRecord, $IRAPrecord ):float
     {        
-        $distance = $this->GeoUtils->dist( deg2rad( floatval($prevRecord->getFieldValue("latitude" )) ),  deg2rad( floatval($prevRecord->getFieldValue("longitude")) ),
-                                           deg2rad( floatval($IRAPrecord->getFieldValue("latitude" )) ),  deg2rad( floatval($IRAPrecord->getFieldValue("longitude")) ));
+        //$distance = $this->GeoUtils->dist( deg2rad( floatval($prevRecord->getFieldValue("latitude" )) ),  deg2rad( floatval($prevRecord->getFieldValue("longitude")) ),
+        //                                   deg2rad( floatval($IRAPrecord->getFieldValue("latitude" )) ),  deg2rad( floatval($IRAPrecord->getFieldValue("longitude")) ));
+        $distance = $this->GeoUtils->distH( floatval($prevRecord->getFieldValue("latitude" )),  floatval($prevRecord->getFieldValue("longitude")),
+                                            floatval($IRAPrecord->getFieldValue("latitude" )),  floatval($IRAPrecord->getFieldValue("longitude")) );
         
         return $distance;                                       
     }

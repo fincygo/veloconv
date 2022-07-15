@@ -170,6 +170,9 @@ class IrapToEcsConverter
             $this->calculateRankForRows($irap, $lastRow);
             // find first date
             $date = \DateTime::createFromFormat('j.n.Y', $irap->getFieldvalue('road_survey_date'));
+            if (false === $date) {
+                $date = \DateTime::createFromFormat('d/m/Y', $irap->getFieldvalue('road_survey_date'));
+            }
             if (null == $this->firstDate) {
                 $this->firstDate = $date;
                 $this->lastDate = $date;
@@ -443,7 +446,7 @@ class IrapToEcsConverter
             $rec->setFieldvalue('id', $irap->getNewId());
             $rec->setFieldvalue('survey_id', $this->surveyId);
             $rec->setFieldvalue('index', $irap->getNewId());
-            $date = \DateTime::createFromFormat('j.n.Y', $irap->getFieldvalue('road_survey_date'));
+            $date = \DateTime::createFromFormat('d/m/Y', $irap->getFieldvalue('road_survey_date'));
             $rec->setFieldvalue('date', $date->format(DATE_ATOM));
             $rec->setFieldvalue('length', $irap->getFieldvalue('length'));
             $rec->setFieldvalue('i1_legal', $this->getI1legalValue($irap));
